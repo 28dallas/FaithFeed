@@ -3,7 +3,7 @@ import './globals.css'
 import { ThemeProvider } from './components/ThemeProvider'
 
 export const metadata: Metadata = {
-  title: 'Faith Feed',
+  title: 'Faith Feed - Social Faith Community',
   description: 'A faith-based social community',
 }
 
