@@ -1,6 +1,6 @@
 'use client'
 
-import { Heart, MessageCircle, Share2, Plus, Home as HomeIcon, Users, Bookmark } from 'lucide-react'
+import { Heart, MessageCircle, Share2, Plus, Home as HomeIcon, Users, Bookmark, Play, Pause, Trash2, Volume2, Sun, Moon, Send, X, LogOut, User } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 
@@ -8,132 +8,37 @@ interface VideoReel {
   id: number
   creator: string
   handle: string
+  title: string
   caption: string
   likes: number
-  comments: number
+  comments: Comment[]
   shares: number
   videoUrl: string
   isLiked: boolean
 }
 
-const mockReels: VideoReel[] = [
-  {
-    id: 1,
-    creator: "Pastor T Mwangi",
-    handle: "@PastorTMwangi",
-    caption: "The greatest gift you can give your children is to love your wife",
-    likes: 12400,
-    comments: 892,
-    shares: 234,
-    videoUrl: "https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4",
-    isLiked: false
-  },
-  {
-    id: 2,
-    creator: "Sarah Grace",
-    handle: "@SarahGrace",
-    caption: "Walking in faith means trusting God even when you can't see the path ahead 🙏",
-    likes: 8900,
-    comments: 456,
-    shares: 123,
-    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
-    isLiked: true
-  },
-  {
-    id: 3,
-    creator: "Youth Pastor Mike",
-    handle: "@YouthPastorMike",
-    caption: "God's love never fails, even in our darkest moments. Hold on to hope! ✨",
-    likes: 15600,
-    comments: 1200,
-    shares: 567,
-    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-    isLiked: false
-  },
-  {
-    id: 4,
-    creator: "Pastor David",
-    handle: "@PastorDavid",
-    caption: "Prayer is not asking. Prayer is putting oneself in the hands of God 🙌",
-    likes: 9800,
-    comments: 678,
-    shares: 234,
-    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
-    isLiked: false
-  },
-  {
-    id: 5,
-    creator: "Sister Mary",
-    handle: "@SisterMary",
-    caption: "Let your light shine before others, that they may see your good deeds 💡",
-    likes: 11200,
-    comments: 543,
-    shares: 189,
-    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
-    isLiked: true
-  },
-  {
-    id: 6,
-    creator: "Pastor John",
-    handle: "@PastorJohn",
-    caption: "Faith is taking the first step even when you don't see the whole staircase",
-    likes: 13500,
-    comments: 789,
-    shares: 345,
-    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
-    isLiked: false
-  },
-  {
-    id: 7,
-    creator: "Minister Grace",
-    handle: "@MinisterGrace",
-    caption: "God's timing is perfect. Trust the process and have faith in His plan 🕊️",
-    likes: 7600,
-    comments: 432,
-    shares: 156,
-    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
-    isLiked: false
-  },
-  {
-    id: 8,
-    creator: "Pastor Emmanuel",
-    handle: "@PastorEmmanuel",
-    caption: "Be still and know that I am God. Find peace in His presence 🕊️",
-    likes: 10300,
-    comments: 612,
-    shares: 278,
-    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
-    isLiked: true
-  },
-  {
-    id: 9,
-    creator: "Sister Joy",
-    handle: "@SisterJoy",
-    caption: "Rejoice always, pray continually, give thanks in all circumstances 🎉",
-    likes: 14800,
-    comments: 923,
-    shares: 412,
-    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4",
-    isLiked: false
-  },
-  {
-    id: 10,
-    creator: "Pastor Samuel",
-    handle: "@PastorSamuel",
-    caption: "Love your neighbor as yourself. Show kindness to everyone you meet ❤️",
-    likes: 16200,
-    comments: 1045,
-    shares: 523,
-    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
-    isLiked: true
-  }
-]
+interface Comment {
+  id: number
+  author: string
+  authorEmail: string
+  text: string
+  timestamp: string
+}
+
+const mockReels: VideoReel[] = []
 
 export default function Home() {
-  const [reels] = useState<VideoReel[]>(mockReels)
+  const [theme, setTheme] = useState('dark')
+  const [reels, setReels] = useState<VideoReel[]>([])
   const [user, setUser] = useState<any>(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [isPastor, setIsPastor] = useState(false)
   const [activeTab, setActiveTab] = useState('feeds')
+  const [playingStates, setPlayingStates] = useState<{[key: number]: boolean}>({})
+  const [showPlayButton, setShowPlayButton] = useState<{[key: number]: boolean}>({})
+  const [showComments, setShowComments] = useState<{[key: number]: boolean}>({})
+  const [newComment, setNewComment] = useState('')
+  const [showLogoutPopup, setShowLogoutPopup] = useState(false)
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([])
 
   useEffect(() => {
@@ -144,8 +49,19 @@ export default function Home() {
     }
     const parsedUser = JSON.parse(userData)
     setUser(parsedUser)
-    // Check if user is Pastor Isaac Mwangi (admin)
     setIsAdmin(parsedUser.email === 'mwangindengwaisaac@gmail.com' || parsedUser.email === 'breezydallas6@gmail.com' || parsedUser.role === 'admin')
+    
+    const savedPastors = localStorage.getItem('faithfeed_pastors')
+    const pastors = savedPastors ? JSON.parse(savedPastors) : []
+    setIsPastor(pastors.some((pastor: any) => pastor.email === parsedUser.email) || parsedUser.email === 'mwangindengwaisaac@gmail.com' || parsedUser.email === 'breezydallas6@gmail.com')
+    
+    const savedTheme = localStorage.getItem('faithfeed_theme')
+    if (savedTheme) setTheme(savedTheme)
+    
+    const uploadedVideos = localStorage.getItem('faithfeed_videos')
+    if (uploadedVideos) {
+      setReels(JSON.parse(uploadedVideos))
+    }
   }, [])
 
   useEffect(() => {
@@ -154,7 +70,7 @@ export default function Home() {
         entries.forEach((entry) => {
           const video = entry.target as HTMLVideoElement
           if (entry.isIntersecting) {
-            video.play()
+            video.play().catch(console.error)
           } else {
             video.pause()
           }
@@ -168,11 +84,109 @@ export default function Home() {
     })
 
     return () => observer.disconnect()
-  }, [])
+  }, [reels])
 
   const handleLike = (reelId: number) => {
-    // Like functionality removed for simplicity
-    console.log('Liked:', reelId)
+    const updatedReels = reels.map(reel => {
+      if (reel.id === reelId) {
+        return {
+          ...reel,
+          isLiked: !reel.isLiked,
+          likes: reel.isLiked ? reel.likes - 1 : reel.likes + 1
+        }
+      }
+      return reel
+    })
+    setReels(updatedReels)
+    localStorage.setItem('faithfeed_videos', JSON.stringify(updatedReels))
+  }
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light'
+    setTheme(newTheme)
+    localStorage.setItem('faithfeed_theme', newTheme)
+  }
+
+  const handleComment = (reelId: number) => {
+    setShowComments(prev => ({ ...prev, [reelId]: !prev[reelId] }))
+  }
+
+  const addComment = (reelId: number) => {
+    if (!newComment.trim()) return
+    
+    const comment: Comment = {
+      id: Date.now(),
+      author: user.name || user.email.split('@')[0],
+      authorEmail: user.email,
+      text: newComment.trim(),
+      timestamp: new Date().toLocaleTimeString()
+    }
+    
+    const updatedReels = reels.map(reel => {
+      if (reel.id === reelId) {
+        return {
+          ...reel,
+          comments: [...reel.comments, comment]
+        }
+      }
+      return reel
+    })
+    setReels(updatedReels)
+    localStorage.setItem('faithfeed_videos', JSON.stringify(updatedReels))
+    setNewComment('')
+  }
+
+  const deleteComment = (reelId: number, commentId: number, commentAuthorEmail: string) => {
+    if (user.email !== commentAuthorEmail && !isAdmin) return
+    
+    const updatedReels = reels.map(reel => {
+      if (reel.id === reelId) {
+        return {
+          ...reel,
+          comments: reel.comments.filter(comment => comment.id !== commentId)
+        }
+      }
+      return reel
+    })
+    setReels(updatedReels)
+    localStorage.setItem('faithfeed_videos', JSON.stringify(updatedReels))
+  }
+
+  const handleShare = (reelId: number) => {
+    const updatedReels = reels.map(reel => {
+      if (reel.id === reelId) {
+        return {
+          ...reel,
+          shares: reel.shares + 1
+        }
+      }
+      return reel
+    })
+    setReels(updatedReels)
+    localStorage.setItem('faithfeed_videos', JSON.stringify(updatedReels))
+  }
+
+  const toggleVideoPlay = (reelId: number, videoElement: HTMLVideoElement) => {
+    if (videoElement.paused) {
+      videoElement.play()
+      setPlayingStates(prev => ({ ...prev, [reelId]: true }))
+    } else {
+      videoElement.pause()
+      setPlayingStates(prev => ({ ...prev, [reelId]: false }))
+    }
+    
+    setShowPlayButton(prev => ({ ...prev, [reelId]: true }))
+    setTimeout(() => {
+      setShowPlayButton(prev => ({ ...prev, [reelId]: false }))
+    }, 1000)
+  }
+
+  const deleteVideo = (reelId: number) => {
+    if (confirm('Are you sure you want to delete this video?')) {
+      const updatedReels = reels.filter(reel => reel.id !== reelId)
+      setReels(updatedReels)
+      localStorage.setItem('faithfeed_videos', JSON.stringify(updatedReels))
+    }
   }
 
   const formatCount = (count: number) => {
@@ -181,51 +195,157 @@ export default function Home() {
     return count.toString()
   }
 
+  const logout = () => {
+    localStorage.removeItem('faithfeed_user')
+    window.location.href = '/login'
+  }
+
   if (!user) return null
 
+  if (reels.length === 0) {
+    return (
+      <div className="h-screen bg-black flex flex-col items-center justify-center text-white">
+        <div className="flex items-center space-x-4 mb-8">
+          <img src="/img/logo3.png" alt="Faith Feed" className="w-16 h-16" />
+          <span className="text-white font-bold text-2xl">Faith Feed</span>
+        </div>
+        
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-4">No videos yet</h2>
+          <p className="text-gray-400 mb-6">Upload your first vertical video to get started!</p>
+          {isAdmin && (
+            <Link href="/upload" className="px-6 py-3 bg-purple-600 text-white rounded-lg font-medium">
+              Upload Video
+            </Link>
+          )}
+        </div>
+        
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+          <div className="flex items-center justify-around py-3">
+            <button className="flex flex-col items-center space-y-1 text-purple-600">
+              <HomeIcon className="w-6 h-6" />
+              <span className="text-xs font-medium">Feeds</span>
+            </button>
+            <Link href="/pastors" className="flex flex-col items-center space-y-1 text-gray-600">
+              <Users className="w-6 h-6" />
+              <span className="text-xs font-medium">Pastors</span>
+            </Link>
+            {isAdmin ? (
+              <Link href="/upload" className="flex flex-col items-center space-y-1 text-gray-600">
+                <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
+                  <Plus className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xs font-medium">Upload</span>
+              </Link>
+            ) : (
+              <button className="flex flex-col items-center space-y-1 text-gray-600">
+                <Users className="w-6 h-6" />
+                <span className="text-xs font-medium">Community</span>
+              </button>
+            )}
+            <button className="flex flex-col items-center space-y-1 text-gray-600">
+              <Bookmark className="w-6 h-6" />
+              <span className="text-xs font-medium">Saved</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="h-screen overflow-y-scroll snap-y snap-mandatory bg-black">
-      {/* Faith Feed Logo */}
+    <div className={`h-screen overflow-y-scroll snap-y snap-mandatory ${theme === 'dark' ? 'bg-black' : 'bg-white'}`}>
       <div className="fixed top-4 left-4 z-50">
         <div className="flex items-center space-x-4">
-          <img src="/img/logo.png" alt="Faith Feed" className="w-16 h-16" />
-          <span className="text-white font-bold text-2xl">Faith Feed</span>
+          <img src="/img/logo3.png" alt="Faith Feed" className="w-16 h-16" />
+          <span className={`font-bold text-2xl ${theme === 'dark' ? 'text-white' : 'text-black'}`}>Faith Feed</span>
         </div>
       </div>
 
-      {/* Video Reels */}
+      <div className="fixed top-4 right-4 z-50 flex items-center space-x-2">
+        <button
+          onClick={() => setShowLogoutPopup(true)}
+          className={`p-3 rounded-full ${theme === 'dark' ? 'bg-gray-800 text-white' : 'bg-gray-200 text-black'}`}
+        >
+          <User className="w-6 h-6" />
+        </button>
+        <button
+          onClick={toggleTheme}
+          className={`p-3 rounded-full ${theme === 'dark' ? 'bg-gray-800 text-white' : 'bg-gray-200 text-black'}`}
+        >
+          {theme === 'dark' ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
+        </button>
+      </div>
+
       {reels.map((reel, index) => (
         <div key={reel.id} className="relative h-screen snap-start flex items-center justify-center bg-black">
-          {/* Video Background */}
-          <video
-            ref={(el) => {
-              if (el) videoRefs.current[index] = el
-            }}
-            className="w-full h-full object-cover"
-            loop
-            muted
-            playsInline
-            controls={false}
-            preload="metadata"
-          >
-            <source src={reel.videoUrl} type="video/mp4" />
-          </video>
-
-          {/* Right Side Actions */}
-          <div className="absolute right-4 bottom-24 flex flex-col items-center space-y-6 z-10">
-            {/* Creator Profile */}
-            <div className="relative">
-              <div className="w-12 h-12 bg-gray-600 rounded-full border-2 border-white overflow-hidden flex items-center justify-center">
-                <span className="text-white font-bold text-sm">
-                  {reel.creator.charAt(0)}
-                </span>
+          <div className="relative w-full max-w-sm mx-auto h-full">
+            <video
+              ref={(el) => {
+                if (el) videoRefs.current[index] = el
+              }}
+              className="w-full h-full object-cover"
+              style={{ aspectRatio: '9/16', minHeight: '100vh' }}
+              loop
+              muted={false}
+              playsInline
+              autoPlay
+              controls={false}
+              preload="metadata"
+              onClick={(e) => {
+                const video = e.target as HTMLVideoElement
+                toggleVideoPlay(reel.id, video)
+              }}
+            >
+              <source src={reel.videoUrl} type="video/mp4" />
+            </video>
+            
+            {showPlayButton[reel.id] && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="bg-black bg-opacity-50 rounded-full p-4">
+                  {playingStates[reel.id] ? (
+                    <Pause className="w-12 h-12 text-white" />
+                  ) : (
+                    <Play className="w-12 h-12 text-white" />
+                  )}
+                </div>
               </div>
+            )}
+          </div>
+
+          <div className="absolute right-4 bottom-24 flex flex-col items-center space-y-6 z-10">
+            {isAdmin && (
+              <button 
+                onClick={() => deleteVideo(reel.id)}
+                className="p-3 bg-red-600 rounded-full hover:bg-red-700"
+              >
+                <Trash2 className="w-6 h-6 text-white" />
+              </button>
+            )}
+            
+            <div className="relative">
+              {isAdmin ? (
+                <div className="w-12 h-12 bg-gray-600 rounded-full border-2 border-white overflow-hidden flex items-center justify-center">
+                  {user.profilePicture ? (
+                    <img src={user.profilePicture} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-white font-bold text-sm">
+                      {reel.creator.charAt(0)}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div className="w-12 h-12 bg-transparent border-2 border-white rounded-full flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">
+                    {reel.creator.charAt(0)}
+                  </span>
+                </div>
+              )}
               <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center border-2 border-white">
                 <Plus className="w-3 h-3 text-white" />
               </div>
             </div>
 
-            {/* Like Button */}
             <div className="flex flex-col items-center">
               <button 
                 onClick={() => handleLike(reel.id)}
@@ -238,19 +358,23 @@ export default function Home() {
               </span>
             </div>
 
-            {/* Comment Button */}
             <div className="flex flex-col items-center">
-              <button className="p-3 text-white">
+              <button 
+                onClick={() => handleComment(reel.id)}
+                className="p-3 text-white"
+              >
                 <MessageCircle className="w-7 h-7" />
               </button>
               <span className="text-white text-xs font-medium mt-1">
-                {formatCount(reel.comments)}
+                {reel.comments.length}
               </span>
             </div>
 
-            {/* Share Button */}
             <div className="flex flex-col items-center">
-              <button className="p-3 text-white">
+              <button 
+                onClick={() => handleShare(reel.id)}
+                className="p-3 text-white"
+              >
                 <Share2 className="w-7 h-7" />
               </button>
               <span className="text-white text-xs font-medium mt-1">
@@ -259,20 +383,100 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Bottom Content Overlay */}
           <div className="absolute bottom-24 left-4 right-20 z-10">
             <div className="space-y-3">
-              {/* Creator Handle */}
               <h3 className="text-white font-bold text-lg">{reel.handle}</h3>
               
-              {/* Caption */}
+              {reel.title && (
+                <h4 className="text-white font-semibold text-base">{reel.title}</h4>
+              )}
+              
               <p className="text-white text-sm leading-relaxed">{reel.caption}</p>
             </div>
           </div>
+
+          {showComments[reel.id] && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50">
+              <div className={`w-full max-w-md h-2/3 rounded-t-2xl p-4 ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-black'}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold">Comments</h3>
+                  <button onClick={() => setShowComments(prev => ({ ...prev, [reel.id]: false }))}>
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto mb-4 space-y-3 max-h-80">
+                  {reel.comments.map((comment) => (
+                    <div key={comment.id} className="flex space-x-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                        <span className="text-sm font-bold">{comment.author.charAt(0)}</span>
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-semibold text-sm">{comment.author}</span>
+                            <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>{comment.timestamp}</span>
+                          </div>
+                          {(user.email === comment.authorEmail || isAdmin) && (
+                            <button
+                              onClick={() => deleteComment(reel.id, comment.id, comment.authorEmail)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                        <p className="text-sm mt-1">{comment.text}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Add a comment..."
+                    className={`flex-1 p-3 rounded-full border ${theme === 'dark' ? 'bg-gray-800 border-gray-600 text-white' : 'bg-gray-100 border-gray-300 text-black'}`}
+                    onKeyPress={(e) => e.key === 'Enter' && addComment(reel.id)}
+                  />
+                  <button
+                    onClick={() => addComment(reel.id)}
+                    className="p-3 bg-purple-600 text-white rounded-full"
+                  >
+                    <Send className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       ))}
 
-      {/* Bottom Navigation */}
+      {showLogoutPopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className={`p-6 rounded-lg ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-black'}`}>
+            <h3 className="text-lg font-bold mb-4">Logout</h3>
+            <p className="mb-6">Are you sure you want to logout?</p>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowLogoutPopup(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={logout}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
         <div className="flex items-center justify-around py-3">
           <button
@@ -285,15 +489,15 @@ export default function Home() {
             <span className="text-xs font-medium">Feeds</span>
           </button>
           
-          <button
-            onClick={() => setActiveTab('psalters')}
+          <Link
+            href="/pastors"
             className={`flex flex-col items-center space-y-1 ${
-              activeTab === 'psalters' ? 'text-purple-600' : 'text-gray-600'
+              activeTab === 'pastors' ? 'text-purple-600' : 'text-gray-600'
             }`}
           >
             <Users className="w-6 h-6" />
-            <span className="text-xs font-medium">Psalters</span>
-          </button>
+            <span className="text-xs font-medium">Pastors</span>
+          </Link>
           
           {isAdmin ? (
             <Link href="/upload" className="flex flex-col items-center space-y-1 text-gray-600">

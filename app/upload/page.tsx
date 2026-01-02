@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowLeft, Upload, Hash } from 'lucide-react'
+import { ArrowLeft, Upload, Hash, Users, X } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
@@ -14,8 +14,16 @@ export default function UploadPage() {
   const [quote, setQuote] = useState('')
   const [hashtags, setHashtags] = useState('')
   const [caption, setCaption] = useState('')
+  const [taggedPastors, setTaggedPastors] = useState<string[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const pastorsList = [
+    'Pastor Isaac Mwangi',
+    'Pastor David Johnson', 
+    'Pastor Sarah Grace',
+    'Pastor Michael Thompson'
+  ]
 
   useEffect(() => {
     const userData = localStorage.getItem('faithfeed_user')
@@ -38,9 +46,18 @@ export default function UploadPage() {
   const handleVideoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file && file.type.startsWith('video/')) {
+      // Check file size (500MB limit)
+      const maxSize = 500 * 1024 * 1024 // 500MB in bytes
+      if (file.size > maxSize) {
+        alert('Video file is too large. Please select a video under 500MB.')
+        return
+      }
+      
       setSelectedVideo(file)
       const url = URL.createObjectURL(file)
       setVideoPreview(url)
+    } else {
+      alert('Please select a valid video file.')
     }
   }
 
@@ -48,6 +65,33 @@ export default function UploadPage() {
     if (!selectedVideo || !title.trim() || !caption.trim()) return
     
     setIsUploading(true)
+    
+    // Create video URL from file
+    const videoUrl = URL.createObjectURL(selectedVideo)
+    
+    // Get existing videos from localStorage
+    const existingVideos = localStorage.getItem('faithfeed_videos')
+    const videos = existingVideos ? JSON.parse(existingVideos) : []
+    
+    // Create new video object
+    const newVideo = {
+      id: Date.now(), // Simple ID generation
+      creator: user.name || user.email.split('@')[0],
+      handle: `@${user.name?.replace(/\s+/g, '') || user.email.split('@')[0]}`,
+      title: title.trim(),
+      caption: caption + (hashtags ? ` ${hashtags}` : '') + (taggedPastors.length > 0 ? ` Tagged: ${taggedPastors.join(', ')}` : ''),
+      likes: 0,
+      comments: [],
+      shares: 0,
+      videoUrl: videoUrl,
+      isLiked: false
+    }
+    
+    // Add new video to the beginning of the array
+    const updatedVideos = [newVideo, ...videos]
+    
+    // Save to localStorage
+    localStorage.setItem('faithfeed_videos', JSON.stringify(updatedVideos))
     
     // Simulate upload process
     setTimeout(() => {
@@ -110,7 +154,7 @@ export default function UploadPage() {
                 Click to select a video
               </p>
               <p className="text-gray-500 text-sm mt-2">
-                MP4, MOV, AVI up to 100MB
+                MP4, MOV, AVI up to 500MB
               </p>
             </div>
           )}
@@ -174,6 +218,51 @@ export default function UploadPage() {
             <div className="text-right text-sm text-gray-400 mt-1">
               {hashtags.length}/150
             </div>
+          </div>
+
+          {/* Tag Pastors */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              <Users className="w-4 h-4 inline mr-2" />
+              Tag Pastors
+            </label>
+            <div className="space-y-2">
+              {pastorsList.map((pastor) => (
+                <label key={pastor} className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={taggedPastors.includes(pastor)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setTaggedPastors(prev => [...prev, pastor])
+                      } else {
+                        setTaggedPastors(prev => prev.filter(p => p !== pastor))
+                      }
+                    }}
+                    className="rounded border-gray-600 bg-gray-800 text-purple-600 focus:ring-purple-500"
+                  />
+                  <span className="text-white text-sm">{pastor}</span>
+                </label>
+              ))}
+            </div>
+            {taggedPastors.length > 0 && (
+              <div className="mt-3">
+                <p className="text-sm text-gray-400 mb-2">Tagged:</p>
+                <div className="flex flex-wrap gap-2">
+                  {taggedPastors.map((pastor) => (
+                    <span key={pastor} className="bg-purple-600 text-white px-3 py-1 rounded-full text-sm flex items-center">
+                      {pastor}
+                      <button
+                        onClick={() => setTaggedPastors(prev => prev.filter(p => p !== pastor))}
+                        className="ml-2 hover:bg-purple-700 rounded-full p-1"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Caption Input */}

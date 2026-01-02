@@ -340,7 +340,7 @@ export default function Feed() {
       <div className="fixed top-0 left-0 right-0 z-50 bg-black bg-opacity-50 backdrop-blur-sm">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center space-x-3">
-            <img src="/img/logo.png" alt="Faith Feed" className="w-8 h-8" />
+            <img src="/img/logo3.png" alt="Faith Feed" className="w-8 h-8" />
             <span className="text-white font-bold text-lg">Faith Feed</span>
           </div>
           <div className="flex items-center space-x-3">
