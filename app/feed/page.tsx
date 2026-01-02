@@ -479,7 +479,9 @@ export default function Feed() {
               onDoubleClick={() => handleDoubleTap(reel.id)}
             >
               <video
-                ref={(el) => (videoRefs.current[index] = el)}
+                ref={(el) => {
+                  if (el) videoRefs.current[index] = el
+                }}
                 className="w-full h-full object-cover"
                 loop
                 muted={isMuted}
