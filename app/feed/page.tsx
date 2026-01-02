@@ -455,24 +455,9 @@ export default function Feed() {
 
       {/* Video Reels */}
       {filteredReels.map((reel, index) => (
-        <div key={reel.id} className="relative h-screen snap-start flex items-center justify-center">
-          {/* Mobile-sized Video Container */}
-          <div className="relative w-80 h-[600px] bg-black rounded-2xl overflow-hidden shadow-2xl">
-            {/* Video Info Overlay */}
-            <div className="absolute top-3 left-3 z-10">
-              <div className="flex items-center space-x-2">
-                <span className="bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-                  {Math.floor(reel.duration / 60)}:{(reel.duration % 60).toString().padStart(2, '0')}
-                </span>
-                <span className="bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-                  {formatCount(reel.views)} views
-                </span>
-                <span className="bg-purple-600 text-white text-xs px-2 py-1 rounded">
-                  {reel.category}
-                </span>
-              </div>
-            </div>
-
+        <div key={reel.id} className="relative h-screen snap-start flex items-center justify-center bg-black">
+          {/* Mobile-sized Video Container - Force Vertical */}
+          <div className="relative w-full max-w-sm h-full bg-black overflow-hidden">
             {/* Video Background */}
             <div 
               className="relative w-full h-full cursor-pointer"
@@ -488,6 +473,7 @@ export default function Feed() {
                 playsInline
                 preload="none"
                 data-src={reel.videoUrl}
+                style={{ objectPosition: 'center' }}
               >
                 <source src={reel.videoUrl} type="video/mp4" />
                 Your browser does not support the video tag.
@@ -495,7 +481,7 @@ export default function Feed() {
             </div>
 
             {/* Right Side Actions */}
-            <div className="absolute right-3 bottom-20 flex flex-col items-center space-y-4 z-10">
+            <div className="absolute right-4 bottom-32 flex flex-col items-center space-y-4 z-10">
               {/* Creator Profile */}
               <div className="relative">
                 <div className="w-10 h-10 bg-gray-600 rounded-full border-2 border-white overflow-hidden flex items-center justify-center">
@@ -581,7 +567,7 @@ export default function Feed() {
             </div>
 
             {/* Bottom Content Overlay */}
-            <div className="absolute bottom-4 left-3 right-16 z-10">
+            <div className="absolute bottom-20 left-4 right-20 z-10">
               <div className="space-y-2">
                 {/* Creator Handle */}
                 <h3 className="text-white font-bold text-base">{reel.handle}</h3>
