@@ -44,7 +44,7 @@ const mockReels: VideoReel[] = [
     isLiked: false,
     category: "Sermon",
     duration: 45,
-    views: 1200,
+    views: 0,
     isSaved: false
   },
   {
@@ -59,7 +59,7 @@ const mockReels: VideoReel[] = [
     isLiked: false,
     category: "Testimony",
     duration: 32,
-    views: 890,
+    views: 0,
     isSaved: false
   },
   {
@@ -74,37 +74,7 @@ const mockReels: VideoReel[] = [
     isLiked: false,
     category: "Worship",
     duration: 28,
-    views: 1560,
-    isSaved: true
-  },
-  {
-    id: 4,
-    creator: "Pastor David",
-    handle: "@PastorDavid",
-    caption: "Prayer is not asking. Prayer is putting oneself in the hands of God #Prayer #Surrender #Faith 🙌",
-    likes: 0,
-    comments: 0,
-    shares: 0,
-    videoUrl: "https://www.w3schools.com/html/movie.mp4",
-    isLiked: false,
-    category: "Prayer",
-    duration: 38,
-    views: 980,
-    isSaved: false
-  },
-  {
-    id: 5,
-    creator: "Sister Mary",
-    handle: "@SisterMary",
-    caption: "Let your light shine before others, that they may see your good deeds 💡",
-    likes: 0,
-    comments: 0,
-    shares: 0,
-    videoUrl: "https://file-examples.com/storage/fe68c1b7c66c4d2b8c2a5c9/2017/10/file_example_MP4_480_1_5MG.mp4",
-    isLiked: false,
-    category: "Teaching",
-    duration: 42,
-    views: 1100,
+    views: 0,
     isSaved: false
   }
 ]
@@ -202,11 +172,26 @@ export default function Feed() {
   }, [isMuted, reels])
 
   const handleLike = (reelId: number) => {
-    setReels(reels.map(reel => 
-      reel.id === reelId 
-        ? { ...reel, isLiked: !reel.isLiked, likes: reel.isLiked ? reel.likes - 1 : reel.likes + 1 }
-        : reel
-    ))
+    const userId = user?.email || 'anonymous'
+    const likedVideos = JSON.parse(localStorage.getItem('faithfeed_liked_videos') || '{}')
+    const userLikes = likedVideos[userId] || []
+    const hasLiked = userLikes.includes(reelId)
+    
+    setReels(reels.map(reel => {
+      if (reel.id === reelId) {
+        const newLikes = hasLiked ? reel.likes - 1 : reel.likes + 1
+        return { ...reel, isLiked: !hasLiked, likes: Math.max(0, newLikes) }
+      }
+      return reel
+    }))
+    
+    // Update user's liked videos
+    if (hasLiked) {
+      likedVideos[userId] = userLikes.filter((id: number) => id !== reelId)
+    } else {
+      likedVideos[userId] = [...userLikes, reelId]
+    }
+    localStorage.setItem('faithfeed_liked_videos', JSON.stringify(likedVideos))
   }
 
   const handleSave = (reelId: number) => {
