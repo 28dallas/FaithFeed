@@ -201,7 +201,9 @@ export default function Home() {
         <div key={reel.id} className="relative h-screen snap-start flex items-center justify-center bg-black">
           {/* Video Background */}
           <video
-            ref={(el) => (videoRefs.current[index] = el)}
+            ref={(el) => {
+              if (el) videoRefs.current[index] = el
+            }}
             className="w-full h-full object-cover"
             loop
             muted
