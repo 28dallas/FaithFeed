@@ -130,7 +130,7 @@ const mockReels: VideoReel[] = [
 ]
 
 export default function Home() {
-  const [reels, setReels] = useState<VideoReel[]>(mockReels)
+  const [reels] = useState<VideoReel[]>(mockReels)
   const [user, setUser] = useState<any>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [activeTab, setActiveTab] = useState('feeds')
@@ -171,11 +171,8 @@ export default function Home() {
   }, [])
 
   const handleLike = (reelId: number) => {
-    setReels(reels.map(reel => 
-      reel.id === reelId 
-        ? { ...reel, isLiked: !reel.isLiked, likes: reel.isLiked ? reel.likes - 1 : reel.likes + 1 }
-        : reel
-    ))
+    // Like functionality removed for simplicity
+    console.log('Liked:', reelId)
   }
 
   const formatCount = (count: number) => {
