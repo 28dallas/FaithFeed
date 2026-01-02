@@ -1,6 +1,6 @@
 'use client'
 
-import { Heart, MessageCircle, Share2, Plus, Home, Users, Bookmark } from 'lucide-react'
+import { Heart, MessageCircle, Share2, Plus, Home as HomeIcon, Users, Bookmark } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 
@@ -281,7 +281,7 @@ export default function Home() {
               activeTab === 'feeds' ? 'text-purple-600' : 'text-gray-600'
             }`}
           >
-            <Home className="w-6 h-6" />
+            <HomeIcon className="w-6 h-6" />
             <span className="text-xs font-medium">Feeds</span>
           </button>
           
