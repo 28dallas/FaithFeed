@@ -124,7 +124,7 @@ export default function Feed() {
     }
     const parsedUser = JSON.parse(userData)
     setUser(parsedUser)
-    setIsAdmin(parsedUser.email === 'mwangindengwaisaac@gmail.com' || parsedUser.email === 'breezydallas6@gmail.com')
+    setIsAdmin(parsedUser.email === 'mwangindengwaisaac@gmail.com' || parsedUser.email === 'breezydallas6@gmail.com' || parsedUser.role === 'admin')
 
     // Load saved videos state
     const savedVideos = JSON.parse(localStorage.getItem('faithfeed_saved_videos') || '{}')

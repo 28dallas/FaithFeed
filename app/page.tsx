@@ -1,4 +1,4 @@
-'use client'
+t 'use client'
 
 import { Heart, MessageCircle, Share2, Plus, Home as HomeIcon, Users, Bookmark, Play, Pause, Trash2, Volume2, Sun, Moon, Send, X, LogOut, User } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
@@ -49,11 +49,11 @@ export default function Home() {
     }
     const parsedUser = JSON.parse(userData)
     setUser(parsedUser)
-    setIsAdmin(parsedUser.email === 'mwangindengwaisaac@gmail.com' || parsedUser.email === 'breezydallas6@gmail.com')
+    setIsAdmin(parsedUser.email === 'mwangindengwaisaac@gmail.com' || parsedUser.email === 'breezydallas6@gmail.com' || parsedUser.role === 'admin')
     
     const savedPastors = localStorage.getItem('faithfeed_pastors')
     const pastors = savedPastors ? JSON.parse(savedPastors) : []
-    setIsPastor(pastors.some((pastor: any) => pastor.email === parsedUser.email) || parsedUser.email === 'mwangindengwaisaac@gmail.com' || parsedUser.email === 'breezydallas6@gmail.com')
+    setIsPastor(pastors.some((pastor: any) => pastor.email === parsedUser.email) || parsedUser.email === 'mwangindengwaisaac@gmail.com' || parsedUser.email === 'breezydallas6@gmail.com' || parsedUser.role === 'admin')
     
     const savedTheme = localStorage.getItem('faithfeed_theme')
     if (savedTheme) setTheme(savedTheme)
