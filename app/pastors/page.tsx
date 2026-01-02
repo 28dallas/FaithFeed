@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowLeft, Users, MapPin, Phone, Mail, Plus } from 'lucide-react'
+import { ArrowLeft, Users, Trash } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
@@ -13,6 +13,7 @@ interface Pastor {
   phone?: string
   email?: string
   bio: string
+  photo?: string
 }
 
 const pastors: Pastor[] = [
@@ -61,7 +62,8 @@ export default function PastorsPage() {
     location: '',
     phone: '',
     email: '',
-    bio: ''
+    bio: '',
+    photo: ''
   })
 
   useEffect(() => {
@@ -113,52 +115,36 @@ export default function PastorsPage() {
         </div>
       </div>
 
-      <div className="p-4 space-y-4">
-        {pastorsList.map((pastor) => (
-          <div key={pastor.id} className="bg-white rounded-lg shadow-sm border p-6">
-            <div className="flex items-start space-x-4">
-              <div className="w-16 h-16 bg-transparent border-2 border-gray-300 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-gray-600 font-bold text-xl">
-                  {pastor.name.charAt(0)}
-                </span>
-              </div>
-
-              <div className="flex-1">
-                <h3 className="text-lg font-bold text-gray-900">{pastor.name}</h3>
-                <p className="text-purple-600 font-medium">{pastor.title}</p>
-                <p className="text-gray-600 font-medium">{pastor.church}</p>
-                
-                <div className="flex items-center text-gray-500 text-sm mt-2">
-                  <MapPin className="w-4 h-4 mr-1" />
-                  {pastor.location}
+      <div className="p-4">
+        <div className="grid grid-cols-2 gap-4">
+          {pastorsList.map((pastor) => (
+            <div key={pastor.id} className="relative bg-white rounded-2xl shadow-sm border p-6 flex flex-col items-center text-center">
+              {isAdmin && (
+                <button
+                  onClick={() => {
+                    if (!confirm('Delete this pastor?')) return
+                    const updated = pastorsList.filter(p => p.id !== pastor.id)
+                    setPastorsList(updated)
+                    localStorage.setItem('faithfeed_pastors', JSON.stringify(updated))
+                  }}
+                  className="absolute top-3 right-3 bg-red-50 text-red-600 p-2 rounded-full hover:bg-red-100"
+                  aria-label={`Delete ${pastor.name}`}
+                >
+                  <Trash className="w-4 h-4" />
+                </button>
+              )}
+              {pastor.photo ? (
+                <img src={pastor.photo} alt={pastor.name} className="w-24 h-24 rounded-full border-2 border-gray-200 object-cover" />
+              ) : (
+                <div className="w-24 h-24 bg-white rounded-full border-2 border-gray-200 flex items-center justify-center overflow-hidden">
+                  <span className="text-2xl font-bold text-gray-800">{pastor.name.charAt(0)}</span>
                 </div>
+              )}
 
-                <p className="text-gray-700 text-sm mt-3 leading-relaxed">{pastor.bio}</p>
-
-                <div className="flex flex-wrap gap-4 mt-4">
-                  {pastor.phone && (
-                    <a 
-                      href={`tel:${pastor.phone}`}
-                      className="flex items-center text-blue-600 text-sm hover:underline"
-                    >
-                      <Phone className="w-4 h-4 mr-1" />
-                      {pastor.phone}
-                    </a>
-                  )}
-                  {pastor.email && (
-                    <a 
-                      href={`mailto:${pastor.email}`}
-                      className="flex items-center text-blue-600 text-sm hover:underline"
-                    >
-                      <Mail className="w-4 h-4 mr-1" />
-                      {pastor.email}
-                    </a>
-                  )}
-                </div>
-              </div>
+              <h3 className="mt-4 text-base font-semibold text-gray-900">{pastor.name}</h3>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       {showAddForm && isAdmin && (
@@ -214,6 +200,27 @@ export default function PastorsPage() {
                 onChange={(e) => setNewPastor(prev => ({ ...prev, bio: e.target.value }))}
                 className="w-full p-3 border rounded-lg h-20 resize-none"
               />
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Photo (optional)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files && e.target.files[0]
+                    if (!file) return
+                    const reader = new FileReader()
+                    reader.onload = () => {
+                      setNewPastor(prev => ({ ...prev, photo: reader.result as string }))
+                    }
+                    reader.readAsDataURL(file)
+                  }}
+                  className="w-full"
+                />
+                {newPastor.photo && (
+                  <img src={newPastor.photo} alt="preview" className="mt-3 w-28 h-28 rounded-full object-cover border" />
+                )}
+              </div>
             </div>
             <div className="flex space-x-3 mt-6">
               <button

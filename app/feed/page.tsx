@@ -98,6 +98,8 @@ export default function Feed() {
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [showCategories, setShowCategories] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [shareReelId, setShareReelId] = useState<number | null>(null)
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([])
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -122,7 +124,15 @@ export default function Feed() {
     }
     const parsedUser = JSON.parse(userData)
     setUser(parsedUser)
-    setIsAdmin(parsedUser.email === 'mwangindengwaisaac@gmail.com' || parsedUser.email === 'breezydallas6@gmail.com' || parsedUser.role === 'admin')
+    setIsAdmin(parsedUser.email === 'mwangindengwaisaac@gmail.com' || parsedUser.email === 'breezydallas6@gmail.com')
+
+    // Load saved videos state
+    const savedVideos = JSON.parse(localStorage.getItem('faithfeed_saved_videos') || '{}')
+    const userSaves = savedVideos[parsedUser.email] || []
+    setReels(reels.map(reel => ({
+      ...reel,
+      isSaved: userSaves.includes(reel.id)
+    })))
   }, [])
 
   useEffect(() => {
@@ -195,11 +205,24 @@ export default function Feed() {
   }
 
   const handleSave = (reelId: number) => {
-    setReels(reels.map(reel => 
-      reel.id === reelId 
-        ? { ...reel, isSaved: !reel.isSaved }
+    const userId = user?.email || 'anonymous'
+    const savedVideos = JSON.parse(localStorage.getItem('faithfeed_saved_videos') || '{}')
+    const userSaves = savedVideos[userId] || []
+    const isSaved = userSaves.includes(reelId)
+
+    setReels(reels.map(reel =>
+      reel.id === reelId
+        ? { ...reel, isSaved: !isSaved }
         : reel
     ))
+
+    // Update user's saved videos
+    if (isSaved) {
+      savedVideos[userId] = userSaves.filter((id: number) => id !== reelId)
+    } else {
+      savedVideos[userId] = [...userSaves, reelId]
+    }
+    localStorage.setItem('faithfeed_saved_videos', JSON.stringify(savedVideos))
   }
 
   const handleComment = (reelId: number) => {
@@ -279,23 +302,83 @@ export default function Feed() {
   }
 
   const handleShare = (reelId: number) => {
-    const reel = reels.find(r => r.id === reelId)
-    if (navigator.share && reel) {
-      navigator.share({
-        title: `${reel.creator} - Faith Feed`,
-        text: reel.caption,
-        url: window.location.href
-      })
-    } else {
-      navigator.clipboard.writeText(window.location.href)
-      alert('Link copied to clipboard!')
+    setShareReelId(reelId)
+    setShowShareModal(true)
+  }
+
+  const shareToPlatform = (platform: string) => {
+    const reel = reels.find(r => r.id === shareReelId)
+    if (!reel) return
+
+    const shareUrl = window.location.href
+    const shareText = `${reel.caption} - Watch on Faith Feed`
+    const shareTitle = `${reel.creator} - Faith Feed`
+
+    let url = ''
+
+    // Prefer native Web Share API when available (mobile). Increment only on success.
+    if (navigator.share && (platform === 'whatsapp' || platform === 'facebook' || platform === 'twitter' || platform === 'telegram')) {
+      navigator.share({ title: shareTitle, text: shareText, url: shareUrl })
+        .then(() => {
+          setReels(reels.map(r => r.id === shareReelId ? { ...r, shares: r.shares + 1 } : r))
+        })
+        .catch(() => {
+          // share cancelled or failed; do nothing
+        })
+        .finally(() => setShowShareModal(false))
+
+      return
     }
-    
-    setReels(reels.map(reel => 
-      reel.id === reelId 
-        ? { ...reel, shares: reel.shares + 1 }
-        : reel
-    ))
+
+    let shouldConfirmAfterClose = false
+    switch (platform) {
+      case 'whatsapp':
+        url = `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`
+        shouldConfirmAfterClose = true
+        break
+      case 'instagram':
+        navigator.clipboard.writeText(shareUrl)
+        alert('Link copied! Open Instagram and paste the link to share.')
+        setShowShareModal(false)
+        return
+      case 'facebook':
+        url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`
+        shouldConfirmAfterClose = true
+        break
+      case 'twitter':
+        url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`
+        shouldConfirmAfterClose = true
+        break
+      case 'telegram':
+        url = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`
+        shouldConfirmAfterClose = true
+        break
+      case 'copy':
+        navigator.clipboard.writeText(shareUrl)
+        alert('Link copied to clipboard!')
+        setShowShareModal(false)
+        return
+    }
+
+    if (url) {
+      const win = window.open(url, '_blank', 'width=600,height=600')
+      if (shouldConfirmAfterClose && win) {
+        const timer = setInterval(() => {
+          if (win.closed) {
+            clearInterval(timer)
+            const confirmed = confirm('Did you complete the share on the platform?')
+            if (confirmed) {
+              setReels(reels.map(r => r.id === shareReelId ? { ...r, shares: r.shares + 1 } : r))
+            }
+            setShowShareModal(false)
+          }
+        }, 500)
+      } else {
+        setShowShareModal(false)
+      }
+    } else {
+      setShowShareModal(false)
+    }
   }
 
   const handleDelete = (reelId: number) => {
@@ -317,13 +400,17 @@ export default function Feed() {
     })
   }
 
-  const filteredReels = searchQuery 
-    ? reels.filter(reel => 
+  const filteredReels = searchQuery
+    ? reels.filter(reel =>
         reel.creator.toLowerCase().includes(searchQuery.toLowerCase()) ||
         reel.caption.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : selectedCategory === 'All'
-    ? reels
+    ? activeTab === 'saved'
+      ? reels.filter(reel => reel.isSaved)
+      : reels
+    : activeTab === 'saved'
+    ? reels.filter(reel => reel.category === selectedCategory && reel.isSaved)
     : reels.filter(reel => reel.category === selectedCategory)
 
   const formatCount = (count: number) => {
@@ -444,7 +531,7 @@ export default function Feed() {
           {/* Mobile-sized Video Container - Force Vertical */}
           <div className="relative w-full max-w-sm h-full bg-black overflow-hidden">
             {/* Video Background */}
-            <div 
+            <div
               className="relative w-full h-full cursor-pointer"
               onDoubleClick={() => handleDoubleTap(reel.id)}
             >
@@ -470,9 +557,20 @@ export default function Feed() {
               {/* Creator Profile */}
               <div className="relative">
                 <div className="w-10 h-10 bg-gray-600 rounded-full border-2 border-white overflow-hidden flex items-center justify-center">
-                  <span className="text-white font-bold text-xs">
-                    {reel.creator.charAt(0)}
-                  </span>
+                  {(() => {
+                    const savedProfiles = JSON.parse(localStorage.getItem('faithfeed_profiles') || '{}')
+                    const creatorEmail = reel.creator === 'Pastor T Mwangi' ? 'mwangindengwaisaac@gmail.com' :
+                                       reel.creator === 'Sarah Grace' ? 'sarah@example.com' : null
+                    const creatorProfile = creatorEmail ? savedProfiles[creatorEmail] : null
+
+                    return creatorProfile?.profilePicture ? (
+                      <img src={creatorProfile.profilePicture} alt={reel.creator} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-white font-bold text-xs">
+                        {reel.creator.charAt(0)}
+                      </span>
+                    )
+                  })()}
                 </div>
                 <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center border-2 border-white">
                   <Plus className="w-2 h-2 text-white" />
@@ -583,12 +681,22 @@ export default function Feed() {
       )}
 
       {/* No Results */}
-      {((searchQuery && filteredReels.length === 0) || (selectedCategory !== 'All' && filteredReels.length === 0)) && !isLoading && (
+      {((searchQuery && filteredReels.length === 0) || (selectedCategory !== 'All' && filteredReels.length === 0) || (activeTab === 'saved' && filteredReels.length === 0)) && !isLoading && (
         <div className="h-screen flex items-center justify-center">
           <div className="text-center text-white">
-            <Search className="w-16 h-16 mx-auto mb-4 opacity-50" />
-            <h3 className="text-xl font-semibold mb-2">No results found</h3>
-            <p className="text-gray-400">Try searching for something else or change category</p>
+            {activeTab === 'saved' ? (
+              <>
+                <Bookmark className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                <h3 className="text-xl font-semibold mb-2">No saved videos</h3>
+                <p className="text-gray-400">Save videos to watch them later</p>
+              </>
+            ) : (
+              <>
+                <Search className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                <h3 className="text-xl font-semibold mb-2">No results found</h3>
+                <p className="text-gray-400">Try searching for something else or change category</p>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -755,10 +863,105 @@ export default function Feed() {
         </div>
       </div>
 
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-6 w-80 max-w-sm mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Share Video</h3>
+              <button
+                onClick={() => setShowShareModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-4 gap-4">
+              <button
+                onClick={() => shareToPlatform('whatsapp')}
+                className="flex flex-col items-center space-y-2 p-3 hover:bg-gray-50 rounded-lg"
+              >
+                <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xl">📱</span>
+                </div>
+                <span className="text-xs font-medium">WhatsApp</span>
+              </button>
+
+              <button
+                onClick={() => shareToPlatform('instagram')}
+                className="flex flex-col items-center space-y-2 p-3 hover:bg-gray-50 rounded-lg"
+              >
+                <div className="w-12 h-12 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xl">📸</span>
+                </div>
+                <span className="text-xs font-medium">Instagram</span>
+              </button>
+
+              <button
+                onClick={() => shareToPlatform('facebook')}
+                className="flex flex-col items-center space-y-2 p-3 hover:bg-gray-50 rounded-lg"
+              >
+                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xl">📘</span>
+                </div>
+                <span className="text-xs font-medium">Facebook</span>
+              </button>
+
+              <button
+                onClick={() => shareToPlatform('twitter')}
+                className="flex flex-col items-center space-y-2 p-3 hover:bg-gray-50 rounded-lg"
+              >
+                <div className="w-12 h-12 bg-blue-400 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xl">🐦</span>
+                </div>
+                <span className="text-xs font-medium">Twitter</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-4 gap-4 mt-4">
+              <button
+                onClick={() => shareToPlatform('telegram')}
+                className="flex flex-col items-center space-y-2 p-3 hover:bg-gray-50 rounded-lg"
+              >
+                <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xl">✈️</span>
+                </div>
+                <span className="text-xs font-medium">Telegram</span>
+              </button>
+
+              <button
+                onClick={() => shareToPlatform('copy')}
+                className="flex flex-col items-center space-y-2 p-3 hover:bg-gray-50 rounded-lg"
+              >
+                <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
+                  <span className="text-gray-600 text-xl">📋</span>
+                </div>
+                <span className="text-xs font-medium">Copy Link</span>
+              </button>
+
+              <div className="col-span-2"></div>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => shareToPlatform('copy')}
+                className="w-full flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg"
+              >
+                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                  <span className="text-gray-600">📋</span>
+                </div>
+                <span className="font-medium">Copy Link</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Notification Panel */}
-      <NotificationPanel 
-        isOpen={showNotifications} 
-        onClose={() => setShowNotifications(false)} 
+      <NotificationPanel
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
       />
     </div>
   )

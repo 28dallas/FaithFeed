@@ -1,7 +1,7 @@
 'use client'
 
-import { ArrowLeft, Users, Heart, MessageCircle, Share2, UserPlus, UserMinus } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { ArrowLeft, Users, Heart, MessageCircle, Share2, UserPlus, UserMinus, Edit, Camera, Save, X } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
 interface UserProfile {
@@ -23,6 +23,10 @@ export default function ProfilePage({ params }: { params: { userId: string } }) 
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isOwnProfile, setIsOwnProfile] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editedProfile, setEditedProfile] = useState<Partial<UserProfile>>({})
+  const [isAdmin, setIsAdmin] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const userData = localStorage.getItem('faithfeed_user')
@@ -59,6 +63,50 @@ export default function ProfilePage({ params }: { params: { userId: string } }) 
       isFollowing: !profile.isFollowing,
       followers: profile.isFollowing ? profile.followers - 1 : profile.followers + 1
     })
+  }
+
+  const handleEditProfile = () => {
+    setIsEditing(true)
+    setEditedProfile({
+      name: profile?.name,
+      bio: profile?.bio,
+      profilePicture: profile?.profilePicture
+    })
+  }
+
+  const handleSaveProfile = () => {
+    if (!profile || !user) return
+
+    const updatedProfile = {
+      ...profile,
+      ...editedProfile
+    }
+
+    setProfile(updatedProfile)
+
+    // Save to localStorage
+    const savedProfiles = JSON.parse(localStorage.getItem('faithfeed_profiles') || '{}')
+    savedProfiles[user.email] = updatedProfile
+    localStorage.setItem('faithfeed_profiles', JSON.stringify(savedProfiles))
+
+    setIsEditing(false)
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditing(false)
+    setEditedProfile({})
+  }
+
+  const handleProfilePictureChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const imageUrl = e.target?.result as string
+        setEditedProfile(prev => ({ ...prev, profilePicture: imageUrl }))
+      }
+      reader.readAsDataURL(file)
+    }
   }
 
   const formatCount = (count: number) => {
@@ -99,25 +147,74 @@ export default function ProfilePage({ params }: { params: { userId: string } }) 
       <div className="bg-white px-4 pb-4">
         {/* Profile Picture */}
         <div className="relative -mt-16 mb-4">
-          <div className="w-32 h-32 bg-gray-300 rounded-full border-4 border-white overflow-hidden flex items-center justify-center">
-            {profile.profilePicture ? (
-              <img src={profile.profilePicture} alt={profile.name} className="w-full h-full object-cover" />
+          <div className="w-32 h-32 bg-gray-300 rounded-full border-4 border-white overflow-hidden flex items-center justify-center relative">
+            {isEditing ? (
+              <>
+                {editedProfile.profilePicture ? (
+                  <img src={editedProfile.profilePicture} alt={profile.name} className="w-full h-full object-cover" />
+                ) : profile.profilePicture ? (
+                  <img src={profile.profilePicture} alt={profile.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-4xl font-bold text-gray-600">
+                    {profile.name.charAt(0)}
+                  </span>
+                )}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute bottom-0 right-0 bg-purple-600 text-white p-2 rounded-full hover:bg-purple-700"
+                >
+                  <Camera className="w-4 h-4" />
+                </button>
+              </>
             ) : (
-              <span className="text-4xl font-bold text-gray-600">
-                {profile.name.charAt(0)}
-              </span>
+              <>
+                {profile.profilePicture ? (
+                  <img src={profile.profilePicture} alt={profile.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-4xl font-bold text-gray-600">
+                    {profile.name.charAt(0)}
+                  </span>
+                )}
+              </>
             )}
           </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleProfilePictureChange}
+            className="hidden"
+          />
         </div>
 
         {/* Name and Handle */}
         <div className="mb-4">
-          <h2 className="text-2xl font-bold">{profile.name}</h2>
+          {isEditing ? (
+            <input
+              type="text"
+              value={editedProfile.name || ''}
+              onChange={(e) => setEditedProfile(prev => ({ ...prev, name: e.target.value }))}
+              className="text-2xl font-bold w-full border-b border-gray-300 focus:border-purple-500 outline-none"
+              placeholder="Enter your name"
+            />
+          ) : (
+            <h2 className="text-2xl font-bold">{profile.name}</h2>
+          )}
           <p className="text-gray-600">{profile.handle}</p>
         </div>
 
         {/* Bio */}
-        <p className="text-gray-800 mb-4 leading-relaxed">{profile.bio}</p>
+        {isEditing ? (
+          <textarea
+            value={editedProfile.bio || ''}
+            onChange={(e) => setEditedProfile(prev => ({ ...prev, bio: e.target.value }))}
+            className="text-gray-800 mb-4 leading-relaxed w-full border border-gray-300 rounded-lg p-2 focus:border-purple-500 outline-none resize-none"
+            rows={3}
+            placeholder="Tell us about yourself..."
+          />
+        ) : (
+          <p className="text-gray-800 mb-4 leading-relaxed">{profile.bio}</p>
+        )}
 
         {/* Stats */}
         <div className="flex space-x-6 mb-4">
@@ -137,9 +234,36 @@ export default function ProfilePage({ params }: { params: { userId: string } }) 
 
         {/* Action Buttons */}
         <div className="flex space-x-3">
-          {isOwnProfile ? (
+          {isOwnProfile && isAdmin ? (
+            isEditing ? (
+              <>
+                <button
+                  onClick={handleSaveProfile}
+                  className="flex-1 bg-purple-600 text-white py-2 px-4 rounded-lg font-medium flex items-center justify-center space-x-2"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>Save</span>
+                </button>
+                <button
+                  onClick={handleCancelEdit}
+                  className="bg-gray-200 text-gray-800 py-2 px-4 rounded-lg font-medium flex items-center justify-center space-x-2"
+                >
+                  <X className="w-4 h-4" />
+                  <span>Cancel</span>
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={handleEditProfile}
+                className="flex-1 bg-purple-600 text-white py-2 px-4 rounded-lg font-medium flex items-center justify-center space-x-2"
+              >
+                <Edit className="w-4 h-4" />
+                <span>Edit Profile</span>
+              </button>
+            )
+          ) : isOwnProfile ? (
             <button className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg font-medium">
-              Edit Profile
+              Edit Profile (Admin Only)
             </button>
           ) : (
             <>

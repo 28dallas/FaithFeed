@@ -49,7 +49,7 @@ export default function Home() {
     }
     const parsedUser = JSON.parse(userData)
     setUser(parsedUser)
-    setIsAdmin(parsedUser.email === 'mwangindengwaisaac@gmail.com' || parsedUser.email === 'breezydallas6@gmail.com' || parsedUser.role === 'admin')
+    setIsAdmin(parsedUser.email === 'mwangindengwaisaac@gmail.com' || parsedUser.email === 'breezydallas6@gmail.com')
     
     const savedPastors = localStorage.getItem('faithfeed_pastors')
     const pastors = savedPastors ? JSON.parse(savedPastors) : []
