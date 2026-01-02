@@ -62,6 +62,18 @@ export default function Home() {
     if (uploadedVideos) {
       setReels(JSON.parse(uploadedVideos))
     }
+
+    // Fetch globally persisted uploads from server and prepend them
+    fetch('/api/videos')
+      .then(res => res.json())
+      .then((videos: any[]) => {
+        if (videos && videos.length > 0) {
+          const existingIds = new Set(reels.map(r => r.id))
+          const fresh = videos.filter(v => !existingIds.has(v.id))
+          if (fresh.length) setReels(prev => [...fresh, ...prev])
+        }
+      })
+      .catch(() => {})
   }, [])
 
   useEffect(() => {

@@ -133,6 +133,19 @@ export default function Feed() {
       ...reel,
       isSaved: userSaves.includes(reel.id)
     })))
+
+    // Fetch globally persisted uploads from server and prepend them
+    fetch('/api/videos')
+      .then(res => res.json())
+      .then((videos: any[]) => {
+        if (videos && videos.length > 0) {
+          // Ensure new videos come first, and avoid duplicating mock items by id
+          const existingIds = new Set(reels.map(r => r.id))
+          const fresh = videos.filter(v => !existingIds.has(v.id))
+          if (fresh.length) setReels(prev => [...fresh, ...prev])
+        }
+      })
+      .catch(() => {})
   }, [])
 
   useEffect(() => {

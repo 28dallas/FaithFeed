@@ -63,41 +63,53 @@ export default function UploadPage() {
 
   const handleUpload = async () => {
     if (!selectedVideo || !title.trim() || !caption.trim()) return
-    
+
     setIsUploading(true)
-    
-    // Create video URL from file
-    const videoUrl = URL.createObjectURL(selectedVideo)
-    
-    // Get existing videos from localStorage
-    const existingVideos = localStorage.getItem('faithfeed_videos')
-    const videos = existingVideos ? JSON.parse(existingVideos) : []
-    
-    // Create new video object
-    const newVideo = {
-      id: Date.now(), // Simple ID generation
-      creator: user.name || user.email.split('@')[0],
-      handle: `@${user.name?.replace(/\s+/g, '') || user.email.split('@')[0]}`,
-      title: title.trim(),
-      caption: caption + (hashtags ? ` ${hashtags}` : '') + (taggedPastors.length > 0 ? ` Tagged: ${taggedPastors.join(', ')}` : ''),
-      likes: 0,
-      comments: [],
-      shares: 0,
-      videoUrl: videoUrl,
-      isLiked: false
-    }
-    
-    // Add new video to the beginning of the array
-    const updatedVideos = [newVideo, ...videos]
-    
-    // Save to localStorage
-    localStorage.setItem('faithfeed_videos', JSON.stringify(updatedVideos))
-    
-    // Simulate upload process
-    setTimeout(() => {
+
+    // Read file as base64 data URL
+    const readFileAsDataURL = (file: File) => new Promise<string | ArrayBuffer | null>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result)
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+
+    try {
+      const base64 = await readFileAsDataURL(selectedVideo)
+
+      const newVideo = {
+        id: Date.now(), // Simple ID generation
+        creator: user.name || user.email.split('@')[0],
+        handle: `@${user.name?.replace(/\s+/g, '') || user.email.split('@')[0]}`,
+        title: title.trim(),
+        caption: caption + (hashtags ? ` ${hashtags}` : '') + (taggedPastors.length > 0 ? ` Tagged: ${taggedPastors.join(', ')}` : ''),
+        likes: 0,
+        comments: 0,
+        shares: 0,
+        videoUrl: base64,
+        isLiked: false,
+        category: 'Sermon',
+        duration: 0,
+        views: 0,
+        isSaved: false
+      }
+
+      // POST to server API to persist globally
+      const res = await fetch('/api/videos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newVideo)
+      })
+
+      if (!res.ok) throw new Error('Upload failed')
+
       setIsUploading(false)
       router.push('/')
-    }, 2000)
+    } catch (err) {
+      console.error(err)
+      alert('Upload failed. Please try again.')
+      setIsUploading(false)
+    }
   }
 
   if (!user || !isAdmin) {
