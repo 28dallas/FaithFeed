@@ -79,16 +79,19 @@ export default function UploadPage() {
 
     setIsUploading(true)
 
-    // Read file as base64 data URL
-    const readFileAsDataURL = (file: File) => new Promise<string | ArrayBuffer | null>((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result)
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
-
     try {
-      const base64 = await readFileAsDataURL(selectedVideo)
+      // Upload video file first
+      const formData = new FormData()
+      formData.append('video', selectedVideo)
+      
+      const uploadRes = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      })
+      
+      if (!uploadRes.ok) throw new Error('File upload failed')
+      
+      const { videoUrl } = await uploadRes.json()
 
       const newVideo = {
         id: Date.now(),
@@ -99,7 +102,7 @@ export default function UploadPage() {
         likes: 0,
         comments: [],
         shares: 0,
-        videoUrl: base64,
+        videoUrl: videoUrl,
         isLiked: false,
         category: 'Sermon',
         duration: 0,
