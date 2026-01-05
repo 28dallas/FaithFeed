@@ -356,6 +356,15 @@ export default function Home() {
         >
           <Filter className="w-6 h-6" />
         </button>
+        {isAdmin && (
+          <button
+            onClick={() => setShowAddTopic(true)}
+            className={`p-3 rounded-full ${theme === 'dark' ? 'bg-purple-600 text-white' : 'bg-purple-500 text-white'}`}
+            title="New Topic"
+          >
+            <Plus className="w-6 h-6" />
+          </button>
+        )}
         <button
           onClick={() => setShowLogoutPopup(true)}
           className={`p-3 rounded-full ${theme === 'dark' ? 'bg-gray-800 text-white' : 'bg-gray-200 text-black'}`}
