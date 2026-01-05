@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { writeFile, mkdir } from 'fs/promises'
-import path from 'path'
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,21 +9,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 })
     }
 
-    // Try to create uploads directory in /tmp for Vercel
-    const uploadsDir = '/tmp/uploads'
-    await mkdir(uploadsDir, { recursive: true })
+    // Check file size (limit to 10MB for base64)
+    const maxSize = 10 * 1024 * 1024 // 10MB
+    if (file.size > maxSize) {
+      return NextResponse.json({ 
+        error: 'File too large. Please use a video under 10MB.' 
+      }, { status: 400 })
+    }
 
-    // Generate unique filename
-    const timestamp = Date.now()
-    const filename = `${timestamp}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
-    const filepath = path.join(uploadsDir, filename)
-
-    // Save file to /tmp (works on Vercel)
+    // Convert to base64
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
-    await writeFile(filepath, buffer)
-
-    // Return a data URL since we can't serve from /tmp
     const base64 = buffer.toString('base64')
     const mimeType = file.type || 'video/mp4'
     const videoUrl = `data:${mimeType};base64,${base64}`
