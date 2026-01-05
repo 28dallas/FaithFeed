@@ -2,7 +2,7 @@
 
 import { Heart, MessageCircle, Share2, Plus, Home as HomeIcon, Users, Bookmark, Play, Pause, Trash2, Volume2, Sun, Moon, Send, X, LogOut, User, Filter } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 interface VideoReel {
   id: number
@@ -30,6 +30,7 @@ interface Comment {
 const mockReels: VideoReel[] = []
 
 export default function Home() {
+  const router = useRouter()
   const [theme, setTheme] = useState('dark')
   const [reels, setReels] = useState<VideoReel[]>([])
   const [user, setUser] = useState<any>(null)
@@ -43,9 +44,10 @@ export default function Home() {
   const [showLogoutPopup, setShowLogoutPopup] = useState(false)
   const [showTopicFilter, setShowTopicFilter] = useState(false)
   const [selectedTopic, setSelectedTopic] = useState('All Topics')
+  const [topics, setTopics] = useState(['All Topics', 'Prayer', 'Love', 'Worship', 'Grace', 'Purpose', 'Faith', 'Hope', 'Healing', 'Salvation', 'Family'])
+  const [showAddTopic, setShowAddTopic] = useState(false)
+  const [newTopic, setNewTopic] = useState('')
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([])
-
-  const topics = ['All Topics', 'Prayer', 'Love', 'Worship', 'Grace', 'Purpose', 'Faith', 'Hope', 'Healing', 'Salvation', 'Family']
 
   useEffect(() => {
     const userData = localStorage.getItem('faithfeed_user')
@@ -55,7 +57,10 @@ export default function Home() {
     }
     const parsedUser = JSON.parse(userData)
     setUser(parsedUser)
-    setIsAdmin(parsedUser.email === 'mwangindengwaisaac@gmail.com' || parsedUser.email === 'breezydallas6@gmail.com' || parsedUser.role === 'admin')
+    console.log('User data:', parsedUser) // Debug log
+    const adminCheck = parsedUser.email === 'mwangindengwaisaac@gmail.com' || parsedUser.email === 'breezydallas6@gmail.com' || parsedUser.role === 'admin'
+    console.log('Admin check result:', adminCheck) // Debug log
+    setIsAdmin(adminCheck)
     
     const savedPastors = localStorage.getItem('faithfeed_pastors')
     const pastors = savedPastors ? JSON.parse(savedPastors) : []
@@ -64,30 +69,22 @@ export default function Home() {
     const savedTheme = localStorage.getItem('faithfeed_theme')
     if (savedTheme) setTheme(savedTheme)
     
-    const uploadedVideos = localStorage.getItem('faithfeed_videos')
-    let localVideos = []
-    if (uploadedVideos) {
-      localVideos = JSON.parse(uploadedVideos)
+    const savedTopics = localStorage.getItem('faithfeed_topics')
+    if (savedTopics) {
+      setTopics(JSON.parse(savedTopics))
     }
+    
+    const uploadedVideos = localStorage.getItem('faithfeed_videos')
 
     // Fetch globally persisted uploads from server
     fetch('/api/videos')
       .then(res => res.json())
       .then((serverVideos: any[]) => {
         if (serverVideos && serverVideos.length > 0) {
-          // Merge server videos with local videos, avoiding duplicates
-          const allVideos = [...serverVideos, ...localVideos]
-          const uniqueVideos = allVideos.filter((video, index, self) => 
-            index === self.findIndex(v => v.id === video.id)
-          )
-          setReels(uniqueVideos)
-        } else {
-          setReels(localVideos)
+          setReels(serverVideos)
         }
       })
-      .catch(() => {
-        setReels(localVideos)
-      })
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -112,7 +109,7 @@ export default function Home() {
     return () => observer.disconnect()
   }, [reels])
 
-  const handleLike = (reelId: number) => {
+  const handleLike = async (reelId: number) => {
     const updatedReels = reels.map(reel => {
       if (reel.id === reelId) {
         return {
@@ -124,6 +121,16 @@ export default function Home() {
       return reel
     })
     setReels(updatedReels)
+    
+    // Update on server
+    const updatedReel = updatedReels.find(r => r.id === reelId)
+    if (updatedReel) {
+      fetch('/api/videos/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedReel)
+      }).catch(console.error)
+    }
   }
 
   const toggleTheme = () => {
@@ -136,7 +143,7 @@ export default function Home() {
     setShowComments(prev => ({ ...prev, [reelId]: !prev[reelId] }))
   }
 
-  const addComment = (reelId: number) => {
+  const addComment = async (reelId: number) => {
     if (!newComment.trim()) return
     
     const comment: Comment = {
@@ -158,9 +165,19 @@ export default function Home() {
     })
     setReels(updatedReels)
     setNewComment('')
+    
+    // Update on server
+    const updatedReel = updatedReels.find(r => r.id === reelId)
+    if (updatedReel) {
+      fetch('/api/videos/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedReel)
+      }).catch(console.error)
+    }
   }
 
-  const deleteComment = (reelId: number, commentId: number, commentAuthorEmail: string) => {
+  const deleteComment = async (reelId: number, commentId: number, commentAuthorEmail: string) => {
     if (user.email !== commentAuthorEmail && !isAdmin) return
     
     const updatedReels = reels.map(reel => {
@@ -173,9 +190,19 @@ export default function Home() {
       return reel
     })
     setReels(updatedReels)
+    
+    // Update on server
+    const updatedReel = updatedReels.find(r => r.id === reelId)
+    if (updatedReel) {
+      fetch('/api/videos/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedReel)
+      }).catch(console.error)
+    }
   }
 
-  const handleShare = (reelId: number) => {
+  const handleShare = async (reelId: number) => {
     const updatedReels = reels.map(reel => {
       if (reel.id === reelId) {
         return {
@@ -186,6 +213,16 @@ export default function Home() {
       return reel
     })
     setReels(updatedReels)
+    
+    // Update on server
+    const updatedReel = updatedReels.find(r => r.id === reelId)
+    if (updatedReel) {
+      fetch('/api/videos/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedReel)
+      }).catch(console.error)
+    }
   }
 
   const toggleVideoPlay = (reelId: number, videoElement: HTMLVideoElement) => {
@@ -203,10 +240,15 @@ export default function Home() {
     }, 1000)
   }
 
-  const deleteVideo = (reelId: number) => {
+  const deleteVideo = async (reelId: number) => {
     if (confirm('Are you sure you want to delete this video?')) {
       const updatedReels = reels.filter(reel => reel.id !== reelId)
       setReels(updatedReels)
+      
+      // Delete from server
+      fetch(`/api/videos/update?id=${reelId}`, {
+        method: 'DELETE'
+      }).catch(console.error)
     }
   }
 
@@ -219,6 +261,26 @@ export default function Home() {
   const logout = () => {
     localStorage.removeItem('faithfeed_user')
     window.location.href = '/login'
+  }
+
+  const addTopic = () => {
+    if (!newTopic.trim() || topics.includes(newTopic.trim())) return
+    
+    const updatedTopics = [...topics, newTopic.trim()]
+    setTopics(updatedTopics)
+    localStorage.setItem('faithfeed_topics', JSON.stringify(updatedTopics))
+    setNewTopic('')
+    setShowAddTopic(false)
+  }
+
+  const deleteTopic = (topicToDelete: string) => {
+    if (topicToDelete === 'All Topics') return
+    if (!confirm(`Delete topic "${topicToDelete}"?`)) return
+    
+    const updatedTopics = topics.filter(topic => topic !== topicToDelete)
+    setTopics(updatedTopics)
+    localStorage.setItem('faithfeed_topics', JSON.stringify(updatedTopics))
+    if (selectedTopic === topicToDelete) setSelectedTopic('All Topics')
   }
 
   const filteredReels = selectedTopic === 'All Topics' 
@@ -239,9 +301,9 @@ export default function Home() {
           <h2 className="text-xl font-semibold mb-4">No videos yet</h2>
           <p className="text-gray-400 mb-6">Upload your first vertical video to get started!</p>
           {isAdmin && (
-            <Link href="/upload" className="px-6 py-3 bg-purple-600 text-white rounded-lg font-medium">
+            <button onClick={() => router.push('/upload')} className="px-6 py-3 bg-purple-600 text-white rounded-lg font-medium">
               Upload Video
-            </Link>
+            </button>
           )}
         </div>
         
@@ -251,17 +313,17 @@ export default function Home() {
               <HomeIcon className="w-6 h-6" />
               <span className="text-xs font-medium">Feeds</span>
             </button>
-            <Link href="/pastors" className="flex flex-col items-center space-y-1 text-gray-600">
+            <button onClick={() => router.push('/pastors')} className="flex flex-col items-center space-y-1 text-gray-600">
               <Users className="w-6 h-6" />
               <span className="text-xs font-medium">Pastors</span>
-            </Link>
+            </button>
             {isAdmin ? (
-              <Link href="/upload" className="flex flex-col items-center space-y-1 text-gray-600">
+              <button onClick={() => router.push('/upload')} className="flex flex-col items-center space-y-1 text-gray-600">
                 <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
                   <Plus className="w-5 h-5 text-white" />
                 </div>
                 <span className="text-xs font-medium">Upload</span>
-              </Link>
+              </button>
             ) : (
               <button className="flex flex-col items-center space-y-1 text-gray-600">
                 <Users className="w-6 h-6" />
@@ -496,23 +558,75 @@ export default function Home() {
             </div>
             <div className="grid grid-cols-2 gap-3 max-h-80 overflow-y-auto">
               {topics.map((topic) => (
+                <div key={topic} className="relative">
+                  <button
+                    onClick={() => {
+                      setSelectedTopic(topic)
+                      setShowTopicFilter(false)
+                    }}
+                    className={`w-full p-3 rounded-lg text-center ${
+                      selectedTopic === topic
+                        ? 'bg-purple-600 text-white'
+                        : theme === 'dark'
+                        ? 'bg-gray-800 text-white hover:bg-gray-700'
+                        : 'bg-gray-100 text-black hover:bg-gray-200'
+                    }`}
+                  >
+                    {topic}
+                  </button>
+                  {isAdmin && topic !== 'All Topics' && (
+                    <button
+                      onClick={() => deleteTopic(topic)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {isAdmin && (
                 <button
-                  key={topic}
-                  onClick={() => {
-                    setSelectedTopic(topic)
-                    setShowTopicFilter(false)
-                  }}
-                  className={`p-3 rounded-lg text-center ${
-                    selectedTopic === topic
-                      ? 'bg-purple-600 text-white'
-                      : theme === 'dark'
-                      ? 'bg-gray-800 text-white hover:bg-gray-700'
-                      : 'bg-gray-100 text-black hover:bg-gray-200'
+                  onClick={() => setShowAddTopic(true)}
+                  className={`w-full p-3 rounded-lg text-center border-2 border-dashed ${
+                    theme === 'dark'
+                      ? 'border-gray-600 text-gray-400 hover:border-purple-500 hover:text-purple-400'
+                      : 'border-gray-300 text-gray-500 hover:border-purple-500 hover:text-purple-500'
                   }`}
                 >
-                  {topic}
+                  + Add Topic
                 </button>
-              ))}
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAddTopic && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className={`w-full max-w-sm mx-4 p-6 rounded-lg ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white text-black'}`}>
+            <h3 className="text-lg font-bold mb-4">Add New Topic</h3>
+            <input
+              type="text"
+              value={newTopic}
+              onChange={(e) => setNewTopic(e.target.value)}
+              placeholder="Enter topic name"
+              className={`w-full p-3 rounded-lg border ${theme === 'dark' ? 'bg-gray-800 border-gray-600 text-white' : 'bg-gray-100 border-gray-300 text-black'}`}
+              onKeyPress={(e) => e.key === 'Enter' && addTopic()}
+            />
+            <div className="flex space-x-3 mt-4">
+              <button
+                onClick={() => setShowAddTopic(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addTopic}
+                disabled={!newTopic.trim() || topics.includes(newTopic.trim())}
+                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50"
+              >
+                Add
+              </button>
             </div>
           </div>
         </div>
@@ -553,23 +667,23 @@ export default function Home() {
             <span className="text-xs font-medium">Feeds</span>
           </button>
           
-          <Link
-            href="/pastors"
+          <button
+            onClick={() => router.push('/pastors')}
             className={`flex flex-col items-center space-y-1 ${
               activeTab === 'pastors' ? 'text-purple-600' : 'text-gray-600'
             }`}
           >
             <Users className="w-6 h-6" />
             <span className="text-xs font-medium">Pastors</span>
-          </Link>
+          </button>
           
           {isAdmin ? (
-            <Link href="/upload" className="flex flex-col items-center space-y-1 text-gray-600">
+            <button onClick={() => router.push('/upload')} className="flex flex-col items-center space-y-1 text-gray-600">
               <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
                 <Plus className="w-5 h-5 text-white" />
               </div>
               <span className="text-xs font-medium">Upload</span>
-            </Link>
+            </button>
           ) : (
             <button
               onClick={() => setActiveTab('community')}

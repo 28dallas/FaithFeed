@@ -49,12 +49,16 @@ export default function PastorProfile() {
       setPastor(foundPastor)
     }
 
-    const savedVideos = localStorage.getItem('faithfeed_videos')
-    if (savedVideos) {
-      const allVideos = JSON.parse(savedVideos)
-      const pastorVideos = allVideos.filter((video: VideoReel) => video.pastorId === pastorId)
-      setVideos(pastorVideos)
-    }
+    // Load videos from server
+    fetch('/api/videos')
+      .then(res => res.json())
+      .then((serverVideos: VideoReel[]) => {
+        if (serverVideos) {
+          const pastorVideos = serverVideos.filter((video: VideoReel) => video.pastorId === pastorId)
+          setVideos(pastorVideos)
+        }
+      })
+      .catch(() => {})
   }, [pastorId])
 
   const toggleVideoPlay = (videoId: number, videoElement: HTMLVideoElement) => {

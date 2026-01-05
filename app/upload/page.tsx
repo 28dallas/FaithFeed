@@ -19,7 +19,7 @@ export default function UploadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [pastorsList, setPastorsList] = useState<any[]>([])
-  const topics = ['Prayer', 'Love', 'Worship', 'Grace', 'Purpose', 'Faith', 'Hope', 'Healing', 'Salvation', 'Family']
+  const [topics, setTopics] = useState<string[]>([])
 
   useEffect(() => {
     const userData = localStorage.getItem('faithfeed_user')
@@ -29,8 +29,10 @@ export default function UploadPage() {
     }
     const parsedUser = JSON.parse(userData)
     setUser(parsedUser)
+    console.log('Upload page - User data:', parsedUser) // Debug log
     // Check if user is Pastor Isaac Mwangi (admin)
     const adminCheck = parsedUser.email === 'mwangindengwaisaac@gmail.com' || parsedUser.email === 'breezydallas6@gmail.com' || parsedUser.role === 'admin'
+    console.log('Upload page - Admin check result:', adminCheck) // Debug log
     setIsAdmin(adminCheck)
     
     if (!adminCheck) {
@@ -42,6 +44,15 @@ export default function UploadPage() {
     const savedPastors = localStorage.getItem('faithfeed_pastors')
     if (savedPastors) {
       setPastorsList(JSON.parse(savedPastors))
+    }
+
+    // Load topics list
+    const savedTopics = localStorage.getItem('faithfeed_topics')
+    if (savedTopics) {
+      const allTopics = JSON.parse(savedTopics)
+      setTopics(allTopics.filter((topic: string) => topic !== 'All Topics'))
+    } else {
+      setTopics(['Prayer', 'Love', 'Worship', 'Grace', 'Purpose', 'Faith', 'Hope', 'Healing', 'Salvation', 'Family'])
     }
   }, [router])
 

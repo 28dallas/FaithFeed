@@ -55,14 +55,13 @@ export default function PastorsPage() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [pastorsList, setPastorsList] = useState<Pastor[]>(pastors)
   const [showAddForm, setShowAddForm] = useState(false)
+  const [videos, setVideos] = useState<any[]>([])
+  const [showEditPhoto, setShowEditPhoto] = useState<number | null>(null)
+  const [newPhoto, setNewPhoto] = useState('')
   const [newPastor, setNewPastor] = useState({
     name: '',
-    title: '',
     church: '',
     location: '',
-    phone: '',
-    email: '',
-    bio: '',
     photo: ''
   })
 
@@ -80,21 +79,56 @@ export default function PastorsPage() {
     if (savedPastors) {
       setPastorsList(JSON.parse(savedPastors))
     }
+
+    // Load videos to count sermons
+    fetch('/api/videos')
+      .then(res => res.json())
+      .then((serverVideos: any[]) => {
+        if (serverVideos) {
+          setVideos(serverVideos)
+        }
+      })
+      .catch(() => {})
   }, [router])
 
+  const getSermonCount = (pastorId: number) => {
+    return videos.filter(video => video.pastorId === pastorId).length
+  }
+
+  const updatePastorPhoto = (pastorId: number) => {
+    if (!newPhoto) return
+    
+    const updatedPastors = pastorsList.map(pastor => {
+      if (pastor.id === pastorId) {
+        return { ...pastor, photo: newPhoto }
+      }
+      return pastor
+    })
+    
+    setPastorsList(updatedPastors)
+    localStorage.setItem('faithfeed_pastors', JSON.stringify(updatedPastors))
+    setShowEditPhoto(null)
+    setNewPhoto('')
+  }
+
   const addPastor = () => {
-    if (!newPastor.name.trim() || !newPastor.title.trim()) return
+    if (!newPastor.name.trim() || !newPastor.church.trim() || !newPastor.location.trim()) return
     
     const pastor: Pastor = {
       id: Date.now(),
-      ...newPastor
+      name: newPastor.name,
+      title: 'Pastor',
+      church: newPastor.church,
+      location: newPastor.location,
+      bio: '',
+      photo: newPastor.photo
     }
     
     const updatedPastors = [...pastorsList, pastor]
     setPastorsList(updatedPastors)
     localStorage.setItem('faithfeed_pastors', JSON.stringify(updatedPastors))
     
-    setNewPastor({ name: '', title: '', church: '', location: '', phone: '', email: '', bio: '' })
+    setNewPastor({ name: '', church: '', location: '', photo: '' })
     setShowAddForm(false)
   }
 
@@ -102,26 +136,21 @@ export default function PastorsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow-sm border-b">
-        <div className="flex items-center justify-between p-4">
-          <button 
-            onClick={() => router.back()}
-            className="p-2 hover:bg-gray-100 rounded-full"
-          >
-            <ArrowLeft className="w-6 h-6" />
-          </button>
-          <h1 className="text-xl font-bold">Pastors</h1>
-          <div className="w-10"></div>
+      <div className="text-center py-8">
+        <div className="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <Users className="w-8 h-8 text-white" />
         </div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Pastors</h1>
+        <p className="text-gray-600">Discover inspiring preachers and their messages</p>
       </div>
 
-      <div className="p-4">
-        <div className="grid grid-cols-2 gap-4">
+      <div className="px-6 pb-24">
+        <div className="grid grid-cols-2 gap-6">
           {pastorsList.map((pastor) => (
             <button
               key={pastor.id}
               onClick={() => router.push(`/pastors/${pastor.id}`)}
-              className="relative bg-white rounded-2xl shadow-sm border p-6 flex flex-col items-center text-center hover:shadow-md transition-shadow"
+              className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 flex flex-col items-center text-center relative"
             >
               {isAdmin && (
                 <button
@@ -132,27 +161,93 @@ export default function PastorsPage() {
                     setPastorsList(updated)
                     localStorage.setItem('faithfeed_pastors', JSON.stringify(updated))
                   }}
-                  className="absolute top-3 right-3 bg-red-50 text-red-600 p-2 rounded-full hover:bg-red-100"
-                  aria-label={`Delete ${pastor.name}`}
+                  className="absolute top-3 right-3 bg-red-50 text-red-600 p-2 rounded-full hover:bg-red-100 z-10"
                 >
                   <Trash className="w-4 h-4" />
                 </button>
               )}
-              {pastor.photo ? (
-                <img src={pastor.photo} alt={pastor.name} className="w-24 h-24 rounded-full border-2 border-gray-200 object-cover" />
-              ) : (
-                <div className="w-24 h-24 bg-white rounded-full border-2 border-gray-200 flex items-center justify-center overflow-hidden">
-                  <span className="text-2xl font-bold text-gray-800">{pastor.name.charAt(0)}</span>
-                </div>
-              )}
+              
+              <div className="relative mb-4">
+                {pastor.photo ? (
+                  <img 
+                    src={pastor.photo} 
+                    alt={pastor.name} 
+                    className="w-20 h-20 rounded-full border-4 border-gray-100 object-cover" 
+                  />
+                ) : (
+                  <div className="w-20 h-20 bg-gray-100 rounded-full border-4 border-gray-200 flex items-center justify-center">
+                    <span className="text-2xl font-bold text-gray-600">{pastor.name.charAt(0)}</span>
+                  </div>
+                )}
+                {isAdmin && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setShowEditPhoto(pastor.id)
+                    }}
+                    className="absolute -bottom-1 -right-1 bg-purple-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-purple-700"
+                  >
+                    +
+                  </button>
+                )}
+              </div>
 
-              <h3 className="mt-4 text-base font-semibold text-gray-900">{pastor.name}</h3>
-              <p className="text-sm text-purple-600">{pastor.title}</p>
-              <p className="text-xs text-gray-500 mt-1">{pastor.church}</p>
+              <h3 className="font-bold text-gray-900 text-lg mb-1">{pastor.name}</h3>
+              <p className="text-purple-600 font-medium text-sm mb-1">{pastor.church}</p>
+              <div className="flex items-center text-gray-500 text-xs mb-3">
+                <span>📍 {pastor.location}</span>
+              </div>
+              
+              <div className="bg-purple-50 text-purple-600 px-4 py-2 rounded-full text-sm font-medium">
+                📺 {getSermonCount(pastor.id)} sermons
+              </div>
             </button>
           ))}
         </div>
       </div>
+
+      {showEditPhoto && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-sm">
+            <h3 className="text-lg font-bold mb-4">Update Photo</h3>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files && e.target.files[0]
+                if (!file) return
+                const reader = new FileReader()
+                reader.onload = () => {
+                  setNewPhoto(reader.result as string)
+                }
+                reader.readAsDataURL(file)
+              }}
+              className="w-full mb-4"
+            />
+            {newPhoto && (
+              <img src={newPhoto} alt="preview" className="w-20 h-20 rounded-full object-cover border mx-auto mb-4" />
+            )}
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowEditPhoto(null)
+                  setNewPhoto('')
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => updatePastorPhoto(showEditPhoto)}
+                disabled={!newPhoto}
+                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50"
+              >
+                Update
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showAddForm && isAdmin && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -168,44 +263,17 @@ export default function PastorsPage() {
               />
               <input
                 type="text"
-                placeholder="Title *"
-                value={newPastor.title}
-                onChange={(e) => setNewPastor(prev => ({ ...prev, title: e.target.value }))}
-                className="w-full p-3 border rounded-lg"
-              />
-              <input
-                type="text"
-                placeholder="Church"
+                placeholder="Church *"
                 value={newPastor.church}
                 onChange={(e) => setNewPastor(prev => ({ ...prev, church: e.target.value }))}
                 className="w-full p-3 border rounded-lg"
               />
               <input
                 type="text"
-                placeholder="Location"
+                placeholder="Location *"
                 value={newPastor.location}
                 onChange={(e) => setNewPastor(prev => ({ ...prev, location: e.target.value }))}
                 className="w-full p-3 border rounded-lg"
-              />
-              <input
-                type="tel"
-                placeholder="Phone"
-                value={newPastor.phone}
-                onChange={(e) => setNewPastor(prev => ({ ...prev, phone: e.target.value }))}
-                className="w-full p-3 border rounded-lg"
-              />
-              <input
-                type="email"
-                placeholder="Email"
-                value={newPastor.email}
-                onChange={(e) => setNewPastor(prev => ({ ...prev, email: e.target.value }))}
-                className="w-full p-3 border rounded-lg"
-              />
-              <textarea
-                placeholder="Bio"
-                value={newPastor.bio}
-                onChange={(e) => setNewPastor(prev => ({ ...prev, bio: e.target.value }))}
-                className="w-full p-3 border rounded-lg h-20 resize-none"
               />
 
               <div>
@@ -238,7 +306,7 @@ export default function PastorsPage() {
               </button>
               <button
                 onClick={addPastor}
-                disabled={!newPastor.name.trim() || !newPastor.title.trim()}
+                disabled={!newPastor.name.trim() || !newPastor.church.trim() || !newPastor.location.trim()}
                 className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50"
               >
                 Add Pastor
@@ -258,6 +326,34 @@ export default function PastorsPage() {
           </button>
         </div>
       )}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
+        <div className="flex items-center justify-around py-3">
+          <button onClick={() => router.push('/')} className="flex flex-col items-center space-y-1 text-gray-600">
+            <div className="w-6 h-6 flex items-center justify-center">
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+              </svg>
+            </div>
+            <span className="text-xs font-medium">Feeds</span>
+          </button>
+          
+          <div className="flex flex-col items-center space-y-1 text-purple-600">
+            <div className="w-8 h-8 bg-purple-600 rounded-xl flex items-center justify-center">
+              <Users className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-xs font-medium">Pastors</span>
+          </div>
+          
+          <button className="flex flex-col items-center space-y-1 text-gray-600">
+            <div className="w-6 h-6 flex items-center justify-center">
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+                <path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
+              </svg>
+            </div>
+            <span className="text-xs font-medium">Saved</span>
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
