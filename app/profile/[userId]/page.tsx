@@ -18,7 +18,7 @@ interface UserProfile {
   videosCount: number
 }
 
-export default function ProfilePage({ params }: { params: { userId: string } }) {
+export default function ProfilePage({ params }: { params: Promise<{ userId: string }> }) {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -26,9 +26,19 @@ export default function ProfilePage({ params }: { params: { userId: string } }) 
   const [isEditing, setIsEditing] = useState(false)
   const [editedProfile, setEditedProfile] = useState<Partial<UserProfile>>({})
   const [isAdmin, setIsAdmin] = useState(false)
+  const [userId, setUserId] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    // Resolve params promise
+    params.then(resolvedParams => {
+      setUserId(resolvedParams.userId)
+    })
+  }, [params])
+
+  useEffect(() => {
+    if (!userId) return
+    
     const userData = localStorage.getItem('faithfeed_user')
     if (!userData) {
       router.push('/login')
@@ -39,22 +49,22 @@ export default function ProfilePage({ params }: { params: { userId: string } }) 
 
     // Mock profile data - in real app, fetch from API
     const mockProfile: UserProfile = {
-      id: params.userId,
-      name: params.userId === 'pastor-isaac' ? 'Pastor Isaac Mwangi' : 'Sarah Grace',
-      handle: params.userId === 'pastor-isaac' ? '@PastorIsaac' : '@SarahGrace',
-      email: params.userId === 'pastor-isaac' ? 'mwangindengwaisaac@gmail.com' : 'sarah@example.com',
-      bio: params.userId === 'pastor-isaac' 
+      id: userId,
+      name: userId === 'pastor-isaac' ? 'Pastor Isaac Mwangi' : 'Sarah Grace',
+      handle: userId === 'pastor-isaac' ? '@PastorIsaac' : '@SarahGrace',
+      email: userId === 'pastor-isaac' ? 'mwangindengwaisaac@gmail.com' : 'sarah@example.com',
+      bio: userId === 'pastor-isaac' 
         ? 'Senior Pastor at Faith Community Church. Spreading God\'s love through digital ministry. 🙏' 
         : 'Faith blogger and worship leader. Sharing daily inspiration and biblical truths. ✨',
-      followers: params.userId === 'pastor-isaac' ? 12400 : 8900,
-      following: params.userId === 'pastor-isaac' ? 234 : 456,
+      followers: userId === 'pastor-isaac' ? 12400 : 8900,
+      following: userId === 'pastor-isaac' ? 234 : 456,
       isFollowing: false,
-      videosCount: params.userId === 'pastor-isaac' ? 45 : 23
+      videosCount: userId === 'pastor-isaac' ? 45 : 23
     }
     
     setProfile(mockProfile)
     setIsOwnProfile(currentUser.email === mockProfile.email)
-  }, [params.userId, router])
+  }, [userId, router])
 
   const handleFollow = () => {
     if (!profile) return
