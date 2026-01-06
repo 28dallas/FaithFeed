@@ -5,6 +5,7 @@ import path from 'path'
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('Upload API called')
     // Check if we're in production with Blob storage
     if (process.env.VERCEL && process.env.BLOB_READ_WRITE_TOKEN) {
       // Production: Use Vercel Blob
