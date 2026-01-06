@@ -59,10 +59,10 @@ export default function UploadPage() {
   const handleVideoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file && file.type.startsWith('video/')) {
-      // Check file size (100MB limit)
-      const maxSize = 100 * 1024 * 1024 // 100MB in bytes
+      // Check file size (4MB limit for server upload)
+      const maxSize = 4 * 1024 * 1024 // 4MB in bytes
       if (file.size > maxSize) {
-        alert('Video file is too large. Please select a video under 100MB.')
+        alert('Video file is too large. Please select a video under 4MB for now.')
         return
       }
       
@@ -80,42 +80,29 @@ export default function UploadPage() {
     setIsUploading(true)
 
     try {
-      let videoUrl
+      let uploadRes
       
       // Check if we're in production
       if (window.location.hostname.includes('vercel.app')) {
-        // Production: Use client-side upload for larger files
+        // Production: Use filename parameter
         const filename = `${Date.now()}-${selectedVideo.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
-        
-        // Get upload URL from server
-        const uploadUrlRes = await fetch(`/api/upload-url?filename=${filename}`)
-        if (!uploadUrlRes.ok) throw new Error('Failed to get upload URL')
-        
-        const { uploadUrl } = await uploadUrlRes.json()
-        
-        // Upload directly to Vercel Blob
-        const uploadRes = await fetch(uploadUrl, {
-          method: 'PUT',
+        uploadRes = await fetch(`/api/upload?filename=${filename}`, {
+          method: 'POST',
           body: selectedVideo
         })
-        
-        if (!uploadRes.ok) throw new Error('File upload failed')
-        
-        videoUrl = uploadUrl.split('?')[0] // Remove query params to get final URL
       } else {
         // Development: Use FormData
         const formData = new FormData()
         formData.append('video', selectedVideo)
-        const uploadRes = await fetch('/api/upload', {
+        uploadRes = await fetch('/api/upload', {
           method: 'POST',
           body: formData
         })
-        
-        if (!uploadRes.ok) throw new Error('File upload failed')
-        
-        const result = await uploadRes.json()
-        videoUrl = result.videoUrl
       }
+      
+      if (!uploadRes.ok) throw new Error('File upload failed')
+      
+      const { videoUrl } = await uploadRes.json()
 
       const newVideo = {
         id: Date.now(),
@@ -208,7 +195,7 @@ export default function UploadPage() {
                 Click to select a video
               </p>
               <p className="text-gray-500 text-sm mt-2">
-                MP4, MOV, AVI up to 100MB
+                MP4, MOV, AVI up to 4MB
               </p>
             </div>
           )}
