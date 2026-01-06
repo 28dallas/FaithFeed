@@ -14,6 +14,11 @@ export async function POST(request: NextRequest) {
 
     // Use Vercel Blob in production, local storage in development
     if (process.env.VERCEL) {
+      if (!process.env.BLOB_READ_WRITE_TOKEN) {
+        console.error('BLOB_READ_WRITE_TOKEN not found')
+        return NextResponse.json({ error: 'Blob storage not configured' }, { status: 500 })
+      }
+      
       const blob = await put(file.name, file, {
         access: 'public',
       })
