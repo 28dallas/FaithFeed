@@ -80,29 +80,42 @@ export default function UploadPage() {
     setIsUploading(true)
 
     try {
-      let uploadRes
+      let videoUrl
       
       // Check if we're in production
       if (window.location.hostname.includes('vercel.app')) {
-        // Production: Use filename parameter
+        // Production: Use client-side upload for larger files
         const filename = `${Date.now()}-${selectedVideo.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
-        uploadRes = await fetch(`/api/upload?filename=${filename}`, {
-          method: 'POST',
+        
+        // Get upload URL from server
+        const uploadUrlRes = await fetch(`/api/upload-url?filename=${filename}`)
+        if (!uploadUrlRes.ok) throw new Error('Failed to get upload URL')
+        
+        const { uploadUrl } = await uploadUrlRes.json()
+        
+        // Upload directly to Vercel Blob
+        const uploadRes = await fetch(uploadUrl, {
+          method: 'PUT',
           body: selectedVideo
         })
+        
+        if (!uploadRes.ok) throw new Error('File upload failed')
+        
+        videoUrl = uploadUrl.split('?')[0] // Remove query params to get final URL
       } else {
         // Development: Use FormData
         const formData = new FormData()
         formData.append('video', selectedVideo)
-        uploadRes = await fetch('/api/upload', {
+        const uploadRes = await fetch('/api/upload', {
           method: 'POST',
           body: formData
         })
+        
+        if (!uploadRes.ok) throw new Error('File upload failed')
+        
+        const result = await uploadRes.json()
+        videoUrl = result.videoUrl
       }
-      
-      if (!uploadRes.ok) throw new Error('File upload failed')
-      
-      const { videoUrl } = await uploadRes.json()
 
       const newVideo = {
         id: Date.now(),
