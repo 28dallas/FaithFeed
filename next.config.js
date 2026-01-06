@@ -1,13 +1,4 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  api: {
-    bodyParser: {
-      sizeLimit: '100mb',
-    },
-  },
-  experimental: {
-    serverComponentsExternalPackages: [],
-  },
-}
+const nextConfig = {}
 
 module.exports = nextConfig

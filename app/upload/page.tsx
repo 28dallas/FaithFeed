@@ -80,13 +80,25 @@ export default function UploadPage() {
     setIsUploading(true)
 
     try {
-      // Upload video file
-      const filename = `${Date.now()}-${selectedVideo.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
+      let uploadRes
       
-      const uploadRes = await fetch(`/api/upload?filename=${filename}`, {
-        method: 'POST',
-        body: selectedVideo
-      })
+      // Check if we're in production
+      if (window.location.hostname.includes('vercel.app')) {
+        // Production: Use filename parameter
+        const filename = `${Date.now()}-${selectedVideo.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
+        uploadRes = await fetch(`/api/upload?filename=${filename}`, {
+          method: 'POST',
+          body: selectedVideo
+        })
+      } else {
+        // Development: Use FormData
+        const formData = new FormData()
+        formData.append('video', selectedVideo)
+        uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        })
+      }
       
       if (!uploadRes.ok) throw new Error('File upload failed')
       
