@@ -80,13 +80,12 @@ export default function UploadPage() {
     setIsUploading(true)
 
     try {
-      // Upload video file first
-      const formData = new FormData()
-      formData.append('video', selectedVideo)
+      // Upload video file
+      const filename = `${Date.now()}-${selectedVideo.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
       
-      const uploadRes = await fetch('/api/upload', {
+      const uploadRes = await fetch(`/api/upload?filename=${filename}`, {
         method: 'POST',
-        body: formData
+        body: selectedVideo
       })
       
       if (!uploadRes.ok) throw new Error('File upload failed')
