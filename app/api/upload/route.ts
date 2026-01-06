@@ -15,6 +15,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Filename required' }, { status: 400 })
       }
 
+      if (!request.body) {
+        return NextResponse.json({ error: 'No file data' }, { status: 400 })
+      }
+
       const blob = await put(filename, request.body, {
         access: 'public',
       })
