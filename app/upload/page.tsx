@@ -59,10 +59,10 @@ export default function UploadPage() {
   const handleVideoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file && file.type.startsWith('video/')) {
-      // Check file size (4MB limit for server upload)
-      const maxSize = 4 * 1024 * 1024 // 4MB in bytes
+      // Check file size (50MB limit for better user experience)
+      const maxSize = 50 * 1024 * 1024 // 50MB in bytes
       if (file.size > maxSize) {
-        alert('Video file is too large. Please select a video under 4MB for now.')
+        alert('Video file is too large. Please select a video under 50MB.')
         return
       }
       
@@ -195,7 +195,7 @@ export default function UploadPage() {
                 Click to select a video
               </p>
               <p className="text-gray-500 text-sm mt-2">
-                MP4, MOV, AVI up to 4MB
+                MP4, MOV, AVI up to 50MB
               </p>
             </div>
           )}
