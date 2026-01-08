@@ -82,27 +82,44 @@ export default function UploadPage() {
     try {
       let uploadRes
       
-      // Check if we're in production
-      if (window.location.hostname.includes('vercel.app')) {
-        // Production: Use filename parameter
+      // Always check for BLOB_READ_WRITE_TOKEN presence for production
+      const isProduction = window.location.hostname.includes('vercel.app') || 
+                          window.location.hostname.includes('vercel.com') ||
+                          process.env.NODE_ENV === 'production'
+      
+      if (isProduction) {
+        // Production: Use filename parameter for Vercel Blob
         const filename = `${Date.now()}-${selectedVideo.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
-        uploadRes = await fetch(`/api/upload?filename=${filename}`, {
+        console.log('Uploading to production with filename:', filename)
+        
+        uploadRes = await fetch(`/api/upload?filename=${encodeURIComponent(filename)}`, {
           method: 'POST',
-          body: selectedVideo
+          body: selectedVideo,
+          headers: {
+            'Content-Type': selectedVideo.type,
+          },
         })
       } else {
         // Development: Use FormData
+        console.log('Uploading to development')
         const formData = new FormData()
         formData.append('video', selectedVideo)
+        
         uploadRes = await fetch('/api/upload', {
           method: 'POST',
           body: formData
         })
       }
       
-      if (!uploadRes.ok) throw new Error('File upload failed')
+      console.log('Upload response status:', uploadRes.status)
+      
+      if (!uploadRes.ok) {
+        const errorData = await uploadRes.json().catch(() => ({ error: 'Unknown error' }))
+        throw new Error(errorData.error || `HTTP ${uploadRes.status}`)
+      }
       
       const { videoUrl } = await uploadRes.json()
+      console.log('Video uploaded successfully:', videoUrl)
 
       const newVideo = {
         id: Date.now(),
@@ -130,13 +147,16 @@ export default function UploadPage() {
         body: JSON.stringify(newVideo)
       })
 
-      if (!res.ok) throw new Error('Upload failed')
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Unknown error' }))
+        throw new Error(errorData.error || 'Failed to save video data')
+      }
 
       setIsUploading(false)
       router.push('/')
     } catch (err) {
-      console.error(err)
-      alert('Upload failed. Please try again.')
+      console.error('Upload error:', err)
+      alert(`Upload failed: ${err instanceof Error ? err.message : 'Please try again.'}`)
       setIsUploading(false)
     }
   }
