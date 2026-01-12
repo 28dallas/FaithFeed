@@ -59,10 +59,10 @@ export default function UploadPage() {
   const handleVideoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file && file.type.startsWith('video/')) {
-      // Check file size (50MB limit for better user experience)
-      const maxSize = 50 * 1024 * 1024 // 50MB in bytes
+      // Check file size (4MB limit for Vercel deployment)
+      const maxSize = 4 * 1024 * 1024 // 4MB in bytes
       if (file.size > maxSize) {
-        alert('Video file is too large. Please select a video under 50MB.')
+        alert('Video file is too large. Please select a video under 4MB for deployment.')
         return
       }
       
@@ -80,36 +80,13 @@ export default function UploadPage() {
     setIsUploading(true)
 
     try {
-      let uploadRes
+      const filename = `${Date.now()}-${selectedVideo.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
+      console.log('Uploading with filename:', filename)
       
-      // Always check for BLOB_READ_WRITE_TOKEN presence for production
-      const isProduction = window.location.hostname.includes('vercel.app') || 
-                          window.location.hostname.includes('vercel.com') ||
-                          process.env.NODE_ENV === 'production'
-      
-      if (isProduction) {
-        // Production: Use filename parameter for Vercel Blob
-        const filename = `${Date.now()}-${selectedVideo.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
-        console.log('Uploading to production with filename:', filename)
-        
-        uploadRes = await fetch(`/api/upload?filename=${encodeURIComponent(filename)}`, {
-          method: 'POST',
-          body: selectedVideo,
-          headers: {
-            'Content-Type': selectedVideo.type,
-          },
-        })
-      } else {
-        // Development: Use FormData
-        console.log('Uploading to development')
-        const formData = new FormData()
-        formData.append('video', selectedVideo)
-        
-        uploadRes = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData
-        })
-      }
+      const uploadRes = await fetch(`/api/upload?filename=${encodeURIComponent(filename)}`, {
+        method: 'POST',
+        body: selectedVideo,
+      })
       
       console.log('Upload response status:', uploadRes.status)
       
@@ -215,7 +192,7 @@ export default function UploadPage() {
                 Click to select a video
               </p>
               <p className="text-gray-500 text-sm mt-2">
-                MP4, MOV, AVI up to 50MB
+                MP4, MOV, AVI up to 4MB
               </p>
             </div>
           )}
@@ -332,7 +309,7 @@ export default function UploadPage() {
               <li>• Share uplifting and faith-based content</li>
               <li>• Respect all community members</li>
               <li>• No inappropriate or offensive material</li>
-              <li>• Keep videos under 60 seconds</li>
+              <li>• Keep videos under 4MB for deployment</li>
             </ul>
           </div>
         </div>
