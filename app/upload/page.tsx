@@ -59,10 +59,9 @@ export default function UploadPage() {
   const handleVideoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file && file.type.startsWith('video/')) {
-      // Check file size (4MB limit for Vercel deployment)
-      const maxSize = 4 * 1024 * 1024 // 4MB in bytes
+      const maxSize = 100 * 1024 * 1024 // 100MB in bytes
       if (file.size > maxSize) {
-        alert('Video file is too large. Please select a video under 4MB for deployment.')
+        alert('Video file is too large. Please select a video under 100MB.')
         return
       }
       
@@ -192,7 +191,7 @@ export default function UploadPage() {
                 Click to select a video
               </p>
               <p className="text-gray-500 text-sm mt-2">
-                MP4, MOV, AVI up to 4MB
+                MP4, MOV, AVI up to 100MB
               </p>
             </div>
           )}
@@ -309,7 +308,7 @@ export default function UploadPage() {
               <li>• Share uplifting and faith-based content</li>
               <li>• Respect all community members</li>
               <li>• No inappropriate or offensive material</li>
-              <li>• Keep videos under 4MB for deployment</li>
+              <li>• Keep videos under 100MB</li>
             </ul>
           </div>
         </div>
