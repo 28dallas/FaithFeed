@@ -80,21 +80,15 @@ export default function UploadPage() {
 
     try {
       const filename = `${Date.now()}-${selectedVideo.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
-      console.log('Uploading with filename:', filename)
       
-      const uploadRes = await fetch(`/api/upload?filename=${encodeURIComponent(filename)}`, {
-        method: 'POST',
-        body: selectedVideo,
+      // Upload directly to Vercel Blob from client
+      const { put } = await import('@vercel/blob')
+      const blob = await put(filename, selectedVideo, {
+        access: 'public',
+        token: process.env.NEXT_PUBLIC_BLOB_READ_WRITE_TOKEN!,
       })
       
-      console.log('Upload response status:', uploadRes.status)
-      
-      if (!uploadRes.ok) {
-        const errorData = await uploadRes.json().catch(() => ({ error: 'Unknown error' }))
-        throw new Error(errorData.error || `HTTP ${uploadRes.status}`)
-      }
-      
-      const { videoUrl } = await uploadRes.json()
+      const videoUrl = blob.url
       console.log('Video uploaded successfully:', videoUrl)
 
       const newVideo = {
@@ -116,7 +110,6 @@ export default function UploadPage() {
         topic: selectedTopic
       }
 
-      // POST to server API to persist globally
       const res = await fetch('/api/videos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
