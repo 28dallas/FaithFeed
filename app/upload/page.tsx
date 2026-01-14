@@ -59,9 +59,9 @@ export default function UploadPage() {
   const handleVideoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file && file.type.startsWith('video/')) {
-      const maxSize = 100 * 1024 * 1024 // 100MB in bytes
+      const maxSize = 4 * 1024 * 1024 // 4MB in bytes
       if (file.size > maxSize) {
-        alert('Video file is too large. Please select a video under 100MB.')
+        alert('Video file is too large. Please select a video under 4MB.')
         return
       }
       
@@ -187,7 +187,7 @@ export default function UploadPage() {
                 Click to select a video
               </p>
               <p className="text-gray-500 text-sm mt-2">
-                MP4, MOV, AVI up to 100MB
+                MP4, MOV, AVI up to 4MB
               </p>
             </div>
           )}
@@ -304,7 +304,7 @@ export default function UploadPage() {
               <li>• Share uplifting and faith-based content</li>
               <li>• Respect all community members</li>
               <li>• No inappropriate or offensive material</li>
-              <li>• Keep videos under 100MB</li>
+              <li>• Keep videos under 4MB</li>
             </ul>
           </div>
         </div>
