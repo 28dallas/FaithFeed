@@ -1,16 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { put } from '@vercel/blob'
-import { writeFile } from 'fs/promises'
-import path from 'path'
 
 export const runtime = 'nodejs'
-export const maxDuration = 30
+export const maxDuration = 60
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('Upload API called')
-    
-    // Always use Vercel Blob in production
     const { searchParams } = new URL(request.url)
     const filename = searchParams.get('filename')
     
@@ -22,13 +17,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file data' }, { status: 400 })
     }
 
-    console.log('Uploading to Vercel Blob:', filename)
-    
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      return NextResponse.json({ error: 'BLOB_READ_WRITE_TOKEN not configured' }, { status: 500 })
+    }
+
     const blob = await put(filename, request.body, {
       access: 'public',
+      addRandomSuffix: true,
     })
 
-    console.log('Blob upload successful:', blob.url)
     return NextResponse.json({ videoUrl: blob.url })
     
   } catch (error) {

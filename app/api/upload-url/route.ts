@@ -14,17 +14,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Blob storage not configured' }, { status: 500 })
     }
 
-    console.log('Generating upload URL for:', filename)
-
-    // Generate a presigned upload URL
     const blob = await put(filename, new Blob(), {
       access: 'public',
-      handleUploadUrl: 'client',
       addRandomSuffix: false,
     })
 
     return NextResponse.json({ 
-      uploadUrl: blob.uploadUrl,
+      uploadUrl: blob.url,
       downloadUrl: blob.url 
     })
   } catch (error) {
